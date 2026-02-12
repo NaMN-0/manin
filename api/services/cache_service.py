@@ -8,7 +8,15 @@ from supabase import create_client, Client
 url = os.environ.get("SUPABASE_URL")
 key = os.environ.get("SUPABASE_SERVICE_KEY") or os.environ.get("SUPABASE_ANON_KEY")
 
-supabase: Client = create_client(url, key)
+supabase: Client = None
+
+if url and key:
+    try:
+        supabase = create_client(url, key)
+    except Exception as e:
+        print(f"Supabase init failed: {e}")
+else:
+    print("Warning: SUPABASE_URL or KEYS missing. Caching disabled.")
 
 class CacheService:
     @staticmethod
@@ -16,6 +24,7 @@ class CacheService:
         """
         Retrieve a value from the cache if it's not expired.
         """
+        if not supabase: return None
         try:
             # Fetch from Supabase
             response = supabase.table("cache").select("*").eq("key", key).execute()
@@ -49,6 +58,7 @@ class CacheService:
         """
         Save a value to the cache.
         """
+        if not supabase: return
         try:
             data = {
                 "key": key,
@@ -65,6 +75,7 @@ class CacheService:
         """
         Retrieve a value regardless of age (good for fallbacks).
         """
+        if not supabase: return None
         try:
             response = supabase.table("cache").select("*").eq("key", key).execute()
             if response.data:
