@@ -25,7 +25,7 @@ services:
       - key: RAZORPAY_PLAN_ID
         sync: false
       - key: FRONTEND_URL
-        sync: false
+        value: https://kage.sourcer.live
       - key: PORT
         value: "8000"
 
