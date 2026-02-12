@@ -5,14 +5,16 @@ FastAPI server wrapping the existing quant analysis engine.
 
 import os
 import sys
+from dotenv import load_dotenv
+
+# Load environment variables early
+load_dotenv()
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from dotenv import load_dotenv
 from apscheduler.schedulers.background import BackgroundScheduler
 from datetime import datetime, timedelta
 from services.market_service import get_market_overview
-
-load_dotenv()
 
 # Add parent directory to path so we can import existing modules
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))

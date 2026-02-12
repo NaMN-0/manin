@@ -33,5 +33,16 @@ EXCEPTION WHEN OTHERS THEN
   RAISE NOTICE 'Could not update auth.users metadata. Code: %', SQLSTATE;
 END $$;
 
--- 5. Verify Structure (Using 'id' not 'user_id')
+-- 5. Create cache table for Market Overview
+CREATE TABLE IF NOT EXISTS public.cache (
+    key TEXT PRIMARY KEY,
+    value JSONB NOT NULL,
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Enable RLS for cache
+ALTER TABLE public.cache ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow service_role full access" ON public.cache FOR ALL TO service_role USING (true);
+
+-- 6. Verify Structure (Using 'id' not 'user_id')
 SELECT id, email, is_pro, plan FROM public.manin_users LIMIT 5;

@@ -8,6 +8,9 @@ from textblob import TextBlob
 from GoogleNews import GoogleNews
 import time
 import market_loader
+from dotenv import load_dotenv
+
+load_dotenv(dotenv_path='api/.env')
 
 # --- CONFIGURATION ---
 st.set_page_config(layout="wide", page_title="Market Insight Engine")

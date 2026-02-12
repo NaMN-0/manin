@@ -23,6 +23,9 @@ print("DEBUG: All imports done")
 # --- MOCK DATA ---
 # Since fetching thousands of penny stocks live is slow, we use cache or live loader
 import os
+from dotenv import load_dotenv
+
+load_dotenv(dotenv_path='api/.env')
 
 import warnings
 warnings.filterwarnings('ignore')

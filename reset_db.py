@@ -32,7 +32,7 @@ async def factory_reset():
         # or just clear the public tables.
         # Clearing public tables:
         
-        tables = ['manin_scan_logs', 'manin_subscriptions', 'manin_payments', 'manin_users']
+        tables = ['manin_scan_logs', 'manin_subscriptions', 'manin_payments', 'manin_users', 'cache']
         
         for table in tables:
             print(f"   Cleaning {table}...")
