@@ -1,13 +1,13 @@
 import { Link } from 'react-router-dom';
-import { Shield, Github, Twitter, Mail } from 'lucide-react';
+import { Shield } from 'lucide-react';
 import TraderNinjaLogo from './TraderNinjaLogo';
 
 export default function Footer() {
     return (
         <footer style={{
-            background: '#020617', // Darker than main bg
+            background: '#020617',
             borderTop: '1px solid var(--ninja-border)',
-            padding: '48px 0 24px',
+            padding: '40px 0 20px',
             color: 'var(--text-secondary)',
             fontSize: 14,
             marginTop: 'auto'
@@ -16,38 +16,31 @@ export default function Footer() {
                 <div className="footer-grid">
                     {/* Brand */}
                     <div className="footer-brand">
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16, color: 'white' }}>
-                            <TraderNinjaLogo width={32} height={32} />
-                            <span style={{ fontSize: 20, fontWeight: 900, letterSpacing: '-0.02em' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12, color: 'white' }}>
+                            <TraderNinjaLogo width={28} height={28} />
+                            <span style={{ fontSize: 18, fontWeight: 900, letterSpacing: '-0.02em' }}>
                                 KAGE<span className="text-gradient"> AI</span>
                             </span>
                         </div>
-                        <p style={{ lineHeight: 1.6, maxWidth: 300, marginBottom: 24, fontSize: 13, color: '#94a3b8' }}>
-                            Advanced AI-powered stock analysis for the modern trader.
-                            Cut through the noise and find your edge.
+                        <p style={{ lineHeight: 1.6, maxWidth: 280, fontSize: 13, color: '#64748b' }}>
+                            AI-powered stock analysis for the modern trader.
                         </p>
-                        <div style={{ display: 'flex', gap: 12 }}>
-                            <SocialLink icon={Github} href="https://github.com" />
-                            <SocialLink icon={Twitter} href="https://twitter.com" />
-                            <SocialLink icon={Mail} href="mailto:support@kage.ai" />
-                        </div>
                     </div>
 
                     {/* Quick Links */}
                     <div className="footer-links">
-                        <h4 style={{ color: 'white', fontWeight: 700, marginBottom: 16, fontSize: 15 }}>Platform</h4>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                        <h4 style={{ color: 'white', fontWeight: 700, marginBottom: 14, fontSize: 14 }}>Platform</h4>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                             <FooterLink to="/market">Market Overview</FooterLink>
                             <FooterLink to="/penny">Penny Stocks</FooterLink>
                             <FooterLink to="/pro">Pro Intelligence</FooterLink>
-                            <FooterLink to="/login">Login / Sign Up</FooterLink>
                         </div>
                     </div>
 
                     {/* Legal */}
                     <div className="footer-links">
-                        <h4 style={{ color: 'white', fontWeight: 700, marginBottom: 16, fontSize: 15 }}>Legal</h4>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                        <h4 style={{ color: 'white', fontWeight: 700, marginBottom: 14, fontSize: 14 }}>Legal</h4>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                             <FooterLink to="/terms">Terms of Service</FooterLink>
                             <FooterLink to="/privacy">Privacy Policy</FooterLink>
                             <FooterLink to="/disclaimer">Risk Disclaimer</FooterLink>
@@ -57,19 +50,22 @@ export default function Footer() {
 
                 <div className="footer-bottom" style={{
                     borderTop: '1px solid rgba(255,255,255,0.05)',
-                    paddingTop: 24,
+                    paddingTop: 20,
                     display: 'flex',
                     flexWrap: 'wrap',
                     justifyContent: 'space-between',
-                    gap: 16,
+                    gap: 12,
                     alignItems: 'center',
-                    marginTop: 40
+                    marginTop: 32,
+                    fontSize: 12,
+                    color: '#475569'
                 }}>
-                    <div style={{ fontSize: 13, color: '#64748b' }}>
+                    <div>
                         &copy; {new Date().getFullYear()} KAGE AI. All rights reserved.
                     </div>
-                    <div style={{ display: 'flex', gap: 24, fontSize: 12, color: '#64748b' }}>
-                        <span>Made with ⚡ by Ninja Devs</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <Shield size={12} />
+                        <span>Not financial advice. Use at your own risk.</span>
                     </div>
                 </div>
             </div>
@@ -77,13 +73,13 @@ export default function Footer() {
             <style>{`
                 .footer-grid {
                     display: grid;
-                    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+                    grid-template-columns: 1.5fr 1fr 1fr;
                     gap: 40px;
                 }
                 @media (max-width: 640px) {
                     .footer-grid {
                         grid-template-columns: 1fr;
-                        gap: 32px;
+                        gap: 24px;
                         text-align: center;
                     }
                     .footer-brand {
@@ -108,37 +104,14 @@ export default function Footer() {
 
 const FooterLink = ({ to, children }) => (
     <Link to={to} style={{
-        color: 'var(--text-secondary)',
+        color: '#94a3b8',
         textDecoration: 'none',
         transition: 'color 0.2s',
-        fontSize: 14
+        fontSize: 13
     }}
         onMouseEnter={e => e.target.style.color = 'var(--primary)'}
-        onMouseLeave={e => e.target.style.color = 'var(--text-secondary)'}
+        onMouseLeave={e => e.target.style.color = '#94a3b8'}
     >
         {children}
     </Link>
-);
-
-const SocialLink = ({ icon: Icon, href }) => (
-    <a href={href} target="_blank" rel="noopener noreferrer" style={{
-        width: 36, height: 36, borderRadius: '50%',
-        background: 'rgba(255,255,255,0.03)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        color: 'white', transition: 'all 0.2s',
-        border: '1px solid rgba(255,255,255,0.08)'
-    }}
-        onMouseEnter={e => {
-            e.target.style.background = 'var(--primary)';
-            e.target.style.borderColor = 'var(--primary)';
-            e.target.style.transform = 'translateY(-2px)';
-        }}
-        onMouseLeave={e => {
-            e.target.style.background = 'rgba(255,255,255,0.03)';
-            e.target.style.borderColor = 'rgba(255,255,255,0.08)';
-            e.target.style.transform = 'translateY(0)';
-        }}
-    >
-        <Icon size={16} />
-    </a>
 );

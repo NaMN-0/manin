@@ -55,7 +55,7 @@ export default function ProDashboard() {
         }, 800);
 
         try {
-            const res = await api.get(`/api/penny/scan?limit=${scanLimit}`);
+            const res = await api.get(`/penny/scan?limit=${scanLimit}`);
             clearInterval(logInterval);
 
             // "Buffer" time to show the cool loader if API is too fast

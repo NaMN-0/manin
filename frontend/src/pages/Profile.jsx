@@ -33,8 +33,8 @@ export default function Profile() {
         setLoading(true);
         try {
             const [authRes, profileRes] = await Promise.all([
-                api.post('/api/auth/on-login'),
-                api.get('/api/auth/profile')
+                api.post('/auth/on-login'),
+                api.get('/auth/profile')
             ]);
             setPromoStatus(authRes.data.data);
 
@@ -63,7 +63,7 @@ export default function Profile() {
         window.dispatchEvent(new Event('avatar-changed'));
 
         try {
-            await api.patch('/api/auth/profile', {
+            await api.patch('/auth/profile', {
                 combat_style: profile.combat_style
             });
         } catch (e) {

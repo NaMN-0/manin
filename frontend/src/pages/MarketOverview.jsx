@@ -33,7 +33,7 @@ export default function MarketOverview() {
         setLoading(true);
         setError(null);
         try {
-            const res = await api.get('/api/market/overview');
+            const res = await api.get('/market/overview');
             setData(res.data.data);
         } catch (err) {
             setError('Failed to fetch market data. Is the API server running?');
@@ -46,7 +46,7 @@ export default function MarketOverview() {
         setAnalyzing(true);
         setTickerResult(null);
         try {
-            const res = await api.get(`/api/market/analyze/${tickerSearch.trim().toUpperCase()}`);
+            const res = await api.get(`/market/analyze/${tickerSearch.trim().toUpperCase()}`);
             setTickerResult(res.data.data);
         } catch {
             setTickerResult({ error: true });

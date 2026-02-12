@@ -63,7 +63,7 @@ function StockDetailModal({ ticker, initialData, onClose }) {
         async function fetchData() {
             try {
                 // Use cached data if available in api? (API lib might handle it, or we implement here)
-                const res = await api.get(`/api/penny/analyze/${ticker}`);
+                const res = await api.get(`/penny/analyze/${ticker}`);
                 if (mounted) setData(res.data.data);
             } catch (err) {
                 if (mounted) setError('Failed to load deep analysis.');

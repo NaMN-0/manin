@@ -28,7 +28,7 @@ export default function PennyStocks() {
         setLoading(true);
         setError(null);
         try {
-            const res = await api.get('/api/penny/basic?limit=100');
+            const res = await api.get('/penny/basic?limit=100');
             setStocks(res.data.data || []);
         } catch (err) {
             setError('Failed to load penny stocks. Is the API running?');

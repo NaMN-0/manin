@@ -70,7 +70,7 @@ export function AuthProvider({ children }) {
 
     async function checkProStatus() {
         try {
-            const res = await api.get('/api/payments/status');
+            const res = await api.get('/payments/status');
             setIsPro(res.data?.data?.isPro || false);
         } catch {
             setIsPro(false);

@@ -19,7 +19,7 @@ export default function ProGate({ children }) {
                     // Save profile data if provided
                     if (profileData) {
                         try {
-                            await api.patch('/api/auth/profile', {
+                            await api.patch('/auth/profile', {
                                 user_profile: profileData,
                             });
                         } catch (e) {
