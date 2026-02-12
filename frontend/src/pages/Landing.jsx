@@ -147,13 +147,13 @@ export default function Landing() {
     const activeConfig = scenes[currentScene] || scenes[0];
 
     return (
-        <div style={{
+        <div className="landing-container" style={{
             position: 'relative', width: '100%', overflow: 'hidden',
             background: '#050510', color: 'white', fontFamily: 'var(--font-sans)',
             height: 'calc(100vh - 64px)',
         }}>
             {/* Fixed BG */}
-            <div style={{
+            <div className="landing-bg" style={{
                 position: 'absolute', inset: 0, transition: 'background-color 1s', zIndex: 0,
                 backgroundColor: activeConfig.bg,
             }}>
@@ -440,6 +440,15 @@ export default function Landing() {
                 }
                 
                 @media (max-width: 768px) {
+                    .landing-container {
+                        height: auto !important;
+                        overflow-y: visible !important;
+                        overflow-x: hidden !important;
+                    }
+                    .landing-bg {
+                        position: fixed !important;
+                        height: 100vh !important;
+                    }
                     .scroll-container {
                         scroll-snap-type: none !important;
                         height: auto !important;
@@ -448,7 +457,7 @@ export default function Landing() {
                     .scroll-section {
                         min-height: auto !important;
                         height: auto !important;
-                        padding: 60px 20px !important;
+                        padding: 88px 20px 60px 20px !important;
                         scroll-snap-align: none !important;
                     }
                     /* Hide Companion on Mobile */
