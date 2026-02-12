@@ -38,7 +38,7 @@ export default function ProGate({ children }) {
     async function handleSubscribe() {
         setLoading(true);
         try {
-            const res = await api.post('/api/payments/create-order');
+            const res = await api.post('/payments/create-order');
             const { orderId, amount, keyId, currency } = res.data.data;
 
             const options = {
@@ -50,7 +50,7 @@ export default function ProGate({ children }) {
                 order_id: orderId,
                 handler: async function (response) {
                     try {
-                        await api.post('/api/payments/verify', {
+                        await api.post('/payments/verify', {
                             razorpay_payment_id: response.razorpay_payment_id,
                             razorpay_order_id: response.razorpay_order_id,
                             razorpay_signature: response.razorpay_signature,
