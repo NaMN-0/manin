@@ -377,8 +377,14 @@ export default function Landing() {
                 </ScrollSection>
 
                 {/* ═══ SCENE 6: SINGLE CTA ═══ */}
-                <ScrollSection style={{ background: 'rgba(15,23,42,0.5)', backdropFilter: 'blur(4px)' }}>
-                    <div style={{ textAlign: 'center', maxWidth: 600, margin: '0 auto', padding: '0 24px' }}>
+                <ScrollSection style={{
+                    background: 'rgba(15,23,42,0.5)', backdropFilter: 'blur(4px)',
+                    flexDirection: 'column', justifyContent: 'space-between', paddingBottom: 0
+                }}>
+                    <div style={{
+                        flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                        textAlign: 'center', maxWidth: 600, width: '100%', padding: '0 24px'
+                    }}>
                         <div style={{ width: 200, height: 200, margin: '0 auto 32px' }}>
                             <NinjaSceneVictory width="100%" height="100%" />
                         </div>
@@ -405,12 +411,11 @@ export default function Landing() {
                             Join 1,000+ early adopters
                         </p>
                     </div>
-                </ScrollSection>
 
-                {/* FOOTER SECTION (Not snapped) */}
-                <div style={{ scrollSnapAlign: 'none' }}>
-                    <Footer />
-                </div>
+                    <div style={{ width: '100%' }}>
+                        <Footer />
+                    </div>
+                </ScrollSection>
 
             </div>
 

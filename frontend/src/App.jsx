@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Outlet } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import Navbar from './components/Navbar';
 import Landing from './pages/Landing';
@@ -16,45 +16,56 @@ import ErrorDisplay from './components/ErrorDisplay';
 
 import Footer from './components/Footer';
 
+const MainLayout = () => {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', paddingTop: 64 }}>
+      <main style={{ flex: 1 }}>
+        <Outlet />
+      </main>
+      <Footer />
+    </div>
+  );
+};
+
 function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
         <Navbar />
         <LifetimeBanner />
-        <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
-          <main style={{ flex: 1 }}>
-            <Routes>
-              <Route path="/" element={<Landing />} />
-              <Route path="/welcome" element={
-                <ProtectedRoute>
-                  <Onboarding />
-                </ProtectedRoute>
-              } />
-              <Route path="/market" element={<MarketOverview />} />
-              <Route path="/login" element={<Login />} />
-              <Route path="/auth/callback" element={<AuthCallback />} />
-              <Route path="/penny" element={
-                <ProtectedRoute>
-                  <PennyStocks />
-                </ProtectedRoute>
-              } />
-              <Route path="/pro" element={
-                <ProtectedRoute>
-                  <ProGate>
-                    <ProDashboard />
-                  </ProGate>
-                </ProtectedRoute>
-              } />
-              <Route path="/profile" element={
-                <ProtectedRoute>
-                  <Profile />
-                </ProtectedRoute>
-              } />
-            </Routes>
-          </main>
-          <Footer />
-        </div>
+        <Routes>
+          {/* Landing Page - custom layout (manages its own footer/scroll) */}
+          <Route path="/" element={<Landing />} />
+
+          {/* Main App Layout - includes global footer */}
+          <Route element={<MainLayout />}>
+            <Route path="/welcome" element={
+              <ProtectedRoute>
+                <Onboarding />
+              </ProtectedRoute>
+            } />
+            <Route path="/market" element={<MarketOverview />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/auth/callback" element={<AuthCallback />} />
+            <Route path="/penny" element={
+              <ProtectedRoute>
+                <PennyStocks />
+              </ProtectedRoute>
+            } />
+            <Route path="/pro" element={
+              <ProtectedRoute>
+                <ProGate>
+                  <ProDashboard />
+                </ProGate>
+              </ProtectedRoute>
+            } />
+            <Route path="/profile" element={
+              <ProtectedRoute>
+                <Profile />
+              </ProtectedRoute>
+            } />
+          </Route>
+        </Routes>
       </AuthProvider>
     </BrowserRouter>
   );
