@@ -32,44 +32,47 @@ export default function ProDashboard() {
     async function runScan() {
         if (loading) return;
         setLoading(true);
-        setShowResults(false);
+        setShowResults(true); // Show results immediately as they come in
         setResults([]);
-        setLogs(prev => [...prev, ">> COMMAND RECEIVED: INITIATE SCAN"]);
+        setLogs(prev => [...prev, ">> COMMAND RECEIVED: INITIATE SCAN SEQUENCE"]);
 
-        // Cinematic scrolling logs
-        const scanSteps = [
-            "Deploying agents to sectors...",
-            "Analyzing volume anomalies...",
-            "Filtering noise...",
-            "Detecting smart money flow...",
-            "Acquiring targets..."
-        ];
-
-        let step = 0;
-        const logInterval = setInterval(() => {
-            if (step < scanSteps.length) {
-                const msg = scanSteps[step] || "Processing data packets...";
-                setLogs(prev => [...prev.slice(-4), `>> ${msg}`]);
-                step++;
-            }
-        }, 800);
+        const BATCH_SIZE = 10;
+        let offset = 0;
+        let totalFetched = 0;
+        let consecutiveEmptyBatches = 0;
 
         try {
-            const res = await api.get(`/penny/scan?limit=${scanLimit}`);
-            clearInterval(logInterval);
+            while (totalFetched < scanLimit && consecutiveEmptyBatches < 3) {
+                setLogs(prev => [...prev.slice(-4), `>> Scanning sector block ${offset}...`]);
 
-            // "Buffer" time to show the cool loader if API is too fast
-            setTimeout(() => {
-                setResults(res.data.data || []);
-                setLoading(false);
-                setShowResults(true);
-                setLogs(prev => [...prev, `>> SCAN COMPLETE. ${res.data.data?.length || 0} TARGETS FOUND.`]);
-            }, 2000); // Enforce at least 2s of visually impressive loading
+                const res = await api.get(`/penny/scan_batch?limit=${BATCH_SIZE}&offset=${offset}`);
+                const newData = res.data.data || [];
+
+                if (newData.length > 0) {
+                    setResults(prev => {
+                        const combined = [...prev, ...newData];
+                        // Client-side sort as data comes in
+                        return combined.sort((a, b) => (b.isProfitable ? 1 : 0) - (a.isProfitable ? 1 : 0) || b.upside - a.upside);
+                    });
+                    totalFetched += newData.length;
+                    consecutiveEmptyBatches = 0;
+                } else {
+                    consecutiveEmptyBatches++;
+                }
+
+                offset += BATCH_SIZE;
+
+                // Artificial small delay to prevent rate limiting if backend is too fast (unlikely)
+                await new Promise(r => setTimeout(r, 200));
+            }
+
+            setLogs(prev => [...prev, `>> SCAN COMPLETE. ${totalFetched} TARGETS ACQUIRED.`]);
 
         } catch (err) {
-            clearInterval(logInterval);
+            console.error(err);
+            setLogs(prev => [...prev, ">> ERROR: DATA STREAM INTERRUPTED"]);
+        } finally {
             setLoading(false);
-            setLogs(prev => [...prev, ">> ERROR: CONNECTION SEVERED"]);
         }
     }
 

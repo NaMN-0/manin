@@ -441,25 +441,30 @@ export default function Landing() {
                 
                 @media (max-width: 768px) {
                     .landing-container {
-                        height: auto !important;
-                        overflow-y: visible !important;
-                        overflow-x: hidden !important;
+                        height: calc(100svh - 64px) !important;
+                        overflow-y: scroll !important;
+                        scroll-snap-type: y mandatory !important;
                     }
                     .landing-bg {
-                        position: fixed !important;
-                        height: 100vh !important;
+                        position: absolute !important;
+                        height: 100% !important;
                     }
                     .scroll-container {
-                        scroll-snap-type: none !important;
-                        height: auto !important;
-                        overflow-y: visible !important;
+                        scroll-snap-type: y mandatory !important;
+                        height: 100% !important;
+                        overflow-y: scroll !important;
                     }
                     .scroll-section {
-                        min-height: auto !important;
-                        height: auto !important;
-                        padding: 88px 20px 60px 20px !important;
-                        scroll-snap-align: none !important;
+                        min-height: 100svh !important;
+                        height: 100svh !important;
+                        padding: 80px 20px 40px 20px !important;
+                        scroll-snap-align: start !important;
+                        scroll-snap-stop: always !important;
+                        display: flex !important;
+                        flex-direction: column !important;
+                        justify-content: center !important;
                     }
+                    
                     /* Hide Companion on Mobile */
                     .manin-companion { display: none !important; }
                     
@@ -468,23 +473,30 @@ export default function Landing() {
                         grid-template-columns: 1fr !important;
                     }
                     /* Typography scaling */
-                    h1 { font-size: 36px !important; }
-                    h2 { font-size: 28px !important; }
-                    h3 { font-size: 22px !important; }
-                    p { font-size: 16px !important; }
+                    h1 { font-size: 32px !important; }
+                    h2 { font-size: 24px !important; }
+                    h3 { font-size: 20px !important; }
+                    p { font-size: 14px !important; }
 
                     /* Simplify Three Paths Cards */
                     .path-card {
-                        padding: 24px !important;
+                        padding: 16px !important;
                         min-height: auto !important;
                         transform: none !important;
                         box-shadow: none !important;
                         border: 1px solid rgba(14,165,233,0.2) !important;
+                        margin-bottom: 8px !important;
                     }
                     .path-card svg {
-                        width: 50px !important;
-                        height: 50px !important;
-                        margin-bottom: 12px !important;
+                        width: 40px !important;
+                        height: 40px !important;
+                        margin-bottom: 8px !important;
+                    }
+                    
+                    /* Ensure Three Paths fits on one screen */
+                    .scroll-section:has(.path-card) {
+                        justify-content: flex-start !important;
+                        padding-top: 100px !important;
                     }
                 }
             `}</style>

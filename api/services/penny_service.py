@@ -37,23 +37,25 @@ def _market_progress() -> float:
     return elapsed / total
 
 
+from services.cache_service import CacheService
+
 # ─── Universe ─────────────────────────────────────────────────────────────────
 
-_cached_universe: Optional[list] = None
-_cache_time: Optional[datetime] = None
-
-
 def get_universe() -> list:
-    global _cached_universe, _cache_time
-    if _cached_universe and _cache_time:
-        if (datetime.now() - _cache_time).seconds < 3600:
-            return _cached_universe
+    """Fetches the penny stock universe. Uses Supabase Cache (24 hours)."""
+    # Try cache (24h)
+    cached = CacheService.get("penny_universe", max_age_minutes=1440)
+    if cached:
+        return cached
+
+    # If missing, load from scraper
     if penny_loader:
-        _cached_universe = penny_loader.get_penny_stocks()
-    else:
-        _cached_universe = []
-    _cache_time = datetime.now()
-    return _cached_universe
+        universe = penny_loader.get_penny_stocks()
+        if universe:
+            CacheService.set("penny_universe", universe)
+            return universe
+    
+    return []
 
 
 # ─── Basic scan (free after login) ───────────────────────────────────────────
@@ -190,6 +192,68 @@ def run_full_scan(limit: int = 100) -> list:
             results.append(res)
 
     results.sort(key=lambda x: (1 if x["isProfitable"] else 0, x["upside"]), reverse=True)
+    return results
+
+
+def run_batch_scan(limit: int = 10, offset: int = 0) -> list:
+    """Runs deep analysis on a small batch of tickers. Used for progressive loading."""
+    universe = get_universe()
+    if not universe:
+        return []
+
+    # Slice the universe
+    batch_tickers = universe[offset : offset + limit]
+    if not batch_tickers:
+        return []
+
+    # Phase 1: Screen this batch for basic criteria (Price < $5, Vol > 20k)
+    # We do a quick check first to avoid deep analysis on garbage
+    filtered_batch = []
+    try:
+        # Quick check with yfinance on the batch
+        # We can reuse the logic from run_full_scan but scoped to this batch
+        try:
+             data = yf.download(batch_tickers, period="5d", group_by="ticker", threads=True, progress=False, timeout=20)
+        except Exception:
+             return []
+
+        if data is None or data.empty:
+             return []
+
+        for ticker in batch_tickers:
+            try:
+                if len(batch_tickers) == 1:
+                    df = data
+                else:
+                    if ticker not in data.columns.levels[0]:
+                        continue
+                    df = data[ticker]
+                
+                if df.empty: continue
+                
+                latest = df.iloc[-1]
+                if pd.isna(latest["Close"]) or pd.isna(latest["Volume"]): continue
+                
+                p = float(latest["Close"])
+                v = float(latest["Volume"])
+                
+                # Basic filter: Penny stock definition + some volume
+                if p < 5.0 and v > 10000:
+                    filtered_batch.append(ticker)
+            except Exception:
+                continue
+    except Exception:
+        pass
+
+    # Phase 2: Deep Analyze the filtered list
+    market_prog = _market_progress()
+    results = []
+    
+    for ticker in filtered_batch:
+        res = _deep_analyze(ticker, market_prog)
+        if res:
+            results.append(res)
+
     return results
 
 

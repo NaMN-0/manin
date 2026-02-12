@@ -30,8 +30,19 @@ INDICES = {
 }
 
 
+from services.cache_service import CacheService
+
+# Removed global in-memory cache variables as we used CacheService now
+
 def get_market_overview() -> dict:
-    """Returns current values and daily change for major indices + top movers."""
+    """Returns current values and daily change for major indices + top movers. Uses Supabase Cache (15 min)."""
+    
+    # Try to get from cache first (15 mins TTL)
+    cached_data = CacheService.get("market_overview", max_age_minutes=15)
+    if cached_data:
+        return cached_data
+
+    # If cache miss or expired, fetch live data
     indices_data = []
     for name, symbol in INDICES.items():
         try:
@@ -57,8 +68,13 @@ def get_market_overview() -> dict:
 
     # Top movers from a quick scan of popular tickers
     top_movers = _get_top_movers()
-
-    return {"indices": indices_data, "topMovers": top_movers, "marketOpen": _is_market_open()}
+    
+    result = {"indices": indices_data, "topMovers": top_movers, "marketOpen": _is_market_open()}
+    
+    # Save to Supabase Cache
+    CacheService.set("market_overview", result)
+    
+    return result
 
 
 def _is_market_open() -> bool:

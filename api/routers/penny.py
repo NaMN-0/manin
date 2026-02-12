@@ -45,6 +45,24 @@ async def full_scan(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.get("/scan_batch")
+async def scan_batch(
+    limit: int = Query(10, ge=1, le=50),
+    offset: int = Query(0, ge=0),
+    user: dict = Depends(require_pro),
+):
+    """
+    Progressive scan — returns a small batch of analyzed tickers.
+    Requires Pro subscription.
+    """
+    try:
+        from services.penny_service import run_batch_scan
+        data = run_batch_scan(limit=limit, offset=offset)
+        return {"status": "ok", "count": len(data), "data": data}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.get("/analyze/{ticker}")
 async def analyze_penny(
     ticker: str,

@@ -13,6 +13,7 @@ import Onboarding from './pages/Onboarding';
 import Profile from './pages/Profile';
 import LifetimeBanner from './components/LifetimeBanner';
 import ErrorDisplay from './components/ErrorDisplay';
+import ScrollToTop from './components/ScrollToTop'; // Import ScrollToTop
 
 import Footer from './components/Footer';
 
@@ -31,6 +32,7 @@ function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
+        <ScrollToTop /> {/* Add ScrollToTop here */}
         <Navbar />
         <LifetimeBanner />
         <Routes>

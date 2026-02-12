@@ -8,6 +8,9 @@ import sys
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
+from apscheduler.schedulers.background import BackgroundScheduler
+from datetime import datetime, timedelta
+from services.market_service import get_market_overview
 
 load_dotenv()
 
@@ -22,6 +25,31 @@ app = FastAPI(
     version="1.0.0",
 )
 
+# Setup Scheduler (Background cache refresh)
+scheduler = BackgroundScheduler()
+
+def update_market_cache():
+    print(f"[{datetime.now()}] Running background job: update_market_cache")
+    try:
+        # This function internally writes to Supabase cache
+        get_market_overview()
+        print("Market cache updated.")
+    except Exception as e:
+        print(f"Background job failed: {e}")
+
+@app.on_event("startup")
+def start_scheduler():
+    # Run immediately on startup (5s delay)
+    scheduler.add_job(update_market_cache, 'date', run_date=datetime.now() + timedelta(seconds=5))
+    # Then every 15 mins
+    scheduler.add_job(update_market_cache, 'interval', minutes=15)
+    scheduler.start()
+    print("Background scheduler started.")
+
+@app.on_event("shutdown")
+def shutdown_scheduler():
+    scheduler.shutdown()
+
 # CORS
 frontend_url = os.getenv("FRONTEND_URL", "http://localhost:5173")
 app.add_middleware(
@@ -31,8 +59,8 @@ app.add_middleware(
         "http://localhost:5173", 
         "http://localhost:3000",
         "https://kage.sourcer.live",
-        "https://manin-frontend.onrender.com"
     ],
+    allow_origin_regex=r"https://.*\.onrender\.com",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

@@ -41,6 +41,23 @@ export default function ProGate({ children }) {
             const res = await api.post('/payments/create-order');
             const { orderId, amount, keyId, currency } = res.data.data;
 
+            const loadScript = (src) => {
+                return new Promise((resolve) => {
+                    const script = document.createElement('script');
+                    script.src = src;
+                    script.onload = () => resolve(true);
+                    script.onerror = () => resolve(false);
+                    document.body.appendChild(script);
+                });
+            };
+
+            const rzpLoaded = await loadScript('https://checkout.razorpay.com/v1/checkout.js');
+            if (!rzpLoaded) {
+                alert('Razorpay SDK failed to load. Are you online?');
+                setLoading(false);
+                return;
+            }
+
             const options = {
                 key: keyId || import.meta.env.VITE_RAZORPAY_KEY_ID,
                 amount: amount,
@@ -59,25 +76,19 @@ export default function ProGate({ children }) {
                         // Show the Command Center Construction animation!
                         setShowConstruction(true);
                     } catch (err) {
-                        alert('Payment verification failed. Contact support.');
+                        console.error('Payment verification failed:', err);
+                        alert('Payment verification failed. Please contact support.');
                     }
                 },
                 prefill: { email: user?.email || '' },
                 theme: { color: '#0ea5e9' },
             };
 
-            if (!window.Razorpay) {
-                const script = document.createElement('script');
-                script.src = 'https://checkout.razorpay.com/v1/checkout.js';
-                script.onload = () => {
-                    const rzp = new window.Razorpay(options);
-                    rzp.open();
-                };
-                document.body.appendChild(script);
-            } else {
-                const rzp = new window.Razorpay(options);
-                rzp.open();
-            }
+            const rzp = new window.Razorpay(options);
+            rzp.on('payment.failed', function (response) {
+                alert(`Payment Failed: ${response.error.description}`);
+            });
+            rzp.open();
         } catch (err) {
             console.error("ProGate Subscription Error:", err);
             const msg = err.response?.data?.detail || err.message || "Unknown error";
