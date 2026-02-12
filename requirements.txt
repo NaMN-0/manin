@@ -1,0 +1,10 @@
+streamlit
+yfinance
+pandas
+pandas-ta-classic
+plotly
+textblob
+GoogleNews
+yahoo_fin
+requests_html
+scikit-learn
