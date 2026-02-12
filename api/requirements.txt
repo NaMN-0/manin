@@ -8,7 +8,9 @@ pydantic==2.9.0
 # Quant dependencies (shared with existing code)
 yfinance>=0.2.40
 pandas>=2.2.2
-pandas-ta-classic>=0.3.59
+pandas-ta-classic
+apscheduler
+supabase>=0.3.59
 scikit-learn>=1.5.1
 numpy>=2.0.0
 plotly>=5.22.0

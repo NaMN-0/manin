@@ -63,12 +63,13 @@ export default function Navbar() {
         <>
             <nav style={{
                 position: 'fixed', top: 0, left: 0, right: 0, zIndex: 1000,
-                background: 'rgba(10, 10, 15, 0.85)',
+                background: mobileOpen ? '#05050a' : 'rgba(10, 10, 15, 0.85)', // Solid background when menu open
                 backdropFilter: 'blur(20px)',
-                borderBottom: '1px solid var(--ninja-border)',
+                borderBottom: mobileOpen ? 'none' : '1px solid var(--ninja-border)', // Remove border when menu connects
+                transition: 'background 0.3s'
             }}>
                 <div className="container" style={{
-                    display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: 64,
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: 64, position: 'relative', zIndex: 1001
                 }}>
                     {/* Logo */}
                     <Link to={user ? "/welcome" : "/"} style={{
@@ -188,7 +189,7 @@ export default function Navbar() {
             {/* Mobile Nav Overlay */}
             <div style={{
                 position: 'fixed', inset: 0, top: 64, zIndex: 999,
-                background: 'rgba(5, 5, 10, 0.95)', backdropFilter: 'blur(16px)',
+                background: '#05050a', // Solid background to match header
                 transform: mobileOpen ? 'translateY(0)' : 'translateY(-100%)',
                 opacity: mobileOpen ? 1 : 0,
                 pointerEvents: mobileOpen ? 'auto' : 'none',
