@@ -387,9 +387,36 @@ export default function MarketOverview() {
                     .container { padding: 0 20px !important; }
                     h1 { font-size: 28px !important; }
                     .glass-card { padding: 16px !important; }
-                    /* Stack flex containers */
-                    div[style*="display: flex"] {
-                        flex-wrap: wrap !important;
+                    
+                    /* Hide Ambient Background */
+                    div[style*="opacity: 0.03"] { display: none !important; }
+
+                    /* Header adjustments */
+                    div[style*="justify-content: space-between"] {
+                        flex-direction: column !important;
+                        align-items: flex-start !important;
+                        gap: 16px !important;
+                    }
+                    
+                    /* Metric boxes grid */
+                    div[style*="grid-template-columns: 1fr 1fr"] {
+                        grid-template-columns: 1fr 1fr !important; /* Keep metrics side-by-side if poss, or stack */
+                        gap: 12px !important;
+                    }
+
+                    /* Chart Section Stacking */
+                    div[style*="display: flex"][style*="align-items: start"] {
+                        flex-direction: column !important;
+                    }
+                    div[style*="min-width: 300"] {
+                        width: 100% !important;
+                        min-width: auto !important;
+                        margin-top: 24px !important;
+                    }
+
+                    /* Hide Mascot on mobile chart or position it better */
+                    div[style*="animation: popIn"] {
+                        display: none !important; 
                     }
                 }
             `}</style>

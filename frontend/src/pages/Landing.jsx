@@ -81,7 +81,7 @@ const ManinCompanion = ({ state, message }) => {
     if (state === 'glitch') Component = NinjaHeroGlitch;
 
     return (
-        <div style={{
+        <div className="manin-companion" style={{
             position: 'fixed', bottom: 40, right: 40, zIndex: 60, pointerEvents: 'none',
             transition: 'all 0.5s', transform: state === 'dash' ? 'translateX(-50vw)' : 'none',
         }}>
@@ -260,7 +260,7 @@ export default function Landing() {
                         }}>
 
                             {/* PATH 1: Just Starting Out (left, shorter) */}
-                            <div style={{
+                            <div className="path-card" style={{
                                 background: 'linear-gradient(180deg, rgba(14,165,233,0.06) 0%, rgba(15,23,42,0.6) 100%)',
                                 border: '1px solid rgba(14,165,233,0.15)', borderRadius: 20, padding: '32px 24px',
                                 display: 'flex', flexDirection: 'column',
@@ -288,7 +288,7 @@ export default function Landing() {
                             </div>
 
                             {/* PATH 2: Serious Trader (center, tallest, featured) */}
-                            <div style={{
+                            <div className="path-card" style={{
                                 background: 'linear-gradient(180deg, rgba(14,165,233,0.12) 0%, rgba(15,23,42,0.8) 100%)',
                                 border: '1px solid rgba(14,165,233,0.3)', borderRadius: 24, padding: '40px 32px',
                                 display: 'flex', flexDirection: 'column', position: 'relative',
@@ -323,7 +323,7 @@ export default function Landing() {
                             </div>
 
                             {/* PATH 3: Capital Manager (right, compact, premium) */}
-                            <div style={{
+                            <div className="path-card" style={{
                                 background: 'linear-gradient(180deg, rgba(245,158,11,0.06) 0%, rgba(15,23,42,0.6) 100%)',
                                 border: '1px solid rgba(245,158,11,0.15)', borderRadius: 20, padding: '32px 24px',
                                 display: 'flex', flexDirection: 'column',
@@ -448,17 +448,35 @@ export default function Landing() {
                     .scroll-section {
                         min-height: auto !important;
                         height: auto !important;
-                        padding: 80px 20px !important;
+                        padding: 60px 20px !important;
                         scroll-snap-align: none !important;
                     }
+                    /* Hide Companion on Mobile */
+                    .manin-companion { display: none !important; }
+                    
                     /* Stack grids */
                     div[style*="grid-template-columns"] {
                         grid-template-columns: 1fr !important;
                     }
                     /* Typography scaling */
-                    h1 { font-size: 42px !important; }
-                    h2 { font-size: 32px !important; }
+                    h1 { font-size: 36px !important; }
+                    h2 { font-size: 28px !important; }
+                    h3 { font-size: 22px !important; }
                     p { font-size: 16px !important; }
+
+                    /* Simplify Three Paths Cards */
+                    .path-card {
+                        padding: 24px !important;
+                        min-height: auto !important;
+                        transform: none !important;
+                        box-shadow: none !important;
+                        border: 1px solid rgba(14,165,233,0.2) !important;
+                    }
+                    .path-card svg {
+                        width: 50px !important;
+                        height: 50px !important;
+                        margin-bottom: 12px !important;
+                    }
                 }
             `}</style>
         </div>
