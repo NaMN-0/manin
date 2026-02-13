@@ -19,7 +19,7 @@ import Footer from './components/Footer';
 
 const MainLayout = () => {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', paddingTop: 64 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
       <main style={{ flex: 1 }}>
         <Outlet />
       </main>
