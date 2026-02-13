@@ -10,18 +10,59 @@ import NinjaTrainingLoader from '../components/NinjaTrainingLoader';
 import StockDetailModal from '../components/StockDetailModal';
 import MobileStockCard from '../components/MobileStockCard';
 import { NinjaPennyRocket, NinjaMaster, NinjaDojo } from '../components/NinjaIllustrations';
+import { usePostHog } from 'posthog-js/react';
 
 export default function PennyStocks() {
     const { isPro } = useAuth();
-    // ... state ...
+    const [stocks, setStocks] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+    const [search, setSearch] = useState('');
+    const [sortField, setSortField] = useState('volume');
+    const [sortOrder, setSortOrder] = useState('desc');
+    const [selectedTicker, setSelectedTicker] = useState(null);
+    const posthog = usePostHog();
 
-    // ... useEffect ...
+    useEffect(() => {
+        posthog?.capture('viewed_penny_stocks');
+        fetchStocks();
+    }, [posthog]);
 
-    // ... fetchStocks ...
+    async function fetchStocks() {
+        setLoading(true);
+        setError(null);
+        try {
+            const res = await api.get('/penny/basic');
+            if (res.data && res.data.data) {
+                setStocks(res.data.data);
+            }
+        } catch (err) {
+            console.error('Fetch error:', err);
+            setError(err.response?.data?.detail || 'Failed to fetch penny stocks.');
+        } finally {
+            setLoading(false);
+        }
+    }
 
-    // ... sortedStocks ...
+    const sortedStocks = () => {
+        return stocks
+            .filter(s => s.ticker.toLowerCase().includes(search.toLowerCase()))
+            .sort((a, b) => {
+                const aVal = a[sortField];
+                const bVal = b[sortField];
+                if (sortOrder === 'asc') return aVal > bVal ? 1 : -1;
+                return aVal < bVal ? 1 : -1;
+            });
+    };
 
-    // ... toggleSort ...
+    const toggleSort = (field) => {
+        if (sortField === field) {
+            setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+        } else {
+            setSortField(field);
+            setSortOrder('desc');
+        }
+    };
 
     if (loading) {
         return (
