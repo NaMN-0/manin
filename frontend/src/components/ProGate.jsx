@@ -11,7 +11,14 @@ export default function ProGate({ children }) {
     const { isPro, user, checkProStatus, hasUsedTrial } = useAuth();
     const [loading, setLoading] = useState(false);
     const [showConstruction, setShowConstruction] = useState(false);
-    const [bypassGate, setBypassGate] = useState(false);
+    const [bypassGate, setBypassGate] = useState(() => {
+        return sessionStorage.getItem('kage_pro_bypass') === 'true';
+    });
+
+    const handleBypass = () => {
+        setBypassGate(true);
+        sessionStorage.setItem('kage_pro_bypass', 'true');
+    };
 
     if (showConstruction) {
         return (
@@ -34,7 +41,7 @@ export default function ProGate({ children }) {
         );
     }
 
-    if (isPro || bypassGate) return children;
+    if (isPro || (bypassGate && !hasUsedTrial)) return children;
 
     async function handleSubscribe() {
         setLoading(true);
@@ -167,7 +174,7 @@ export default function ProGate({ children }) {
                         {!hasUsedTrial && (
                             <button
                                 className="btn btn-secondary"
-                                onClick={() => setBypassGate(true)}
+                                onClick={handleBypass}
                                 style={{ width: '100%', alignItems: 'center', justifyContent: 'center', gap: 8, opacity: 0.8 }}
                             >
                                 <Rocket size={16} /> Start One-Time Free Scan

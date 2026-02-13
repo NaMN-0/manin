@@ -85,22 +85,43 @@ async def require_pro(user: dict = Depends(get_current_user)) -> dict:
     if is_pro:
         return user
 
-    # 2. Check Free Trial status (stored in manin_users table, mirror in token if possible)
-    # Since tokens are cached, we might need a quick DB check or rely on the router to verify.
-    # For the middleware, we'll allow the request through if they aren't explicitly marked 
-    # as having USED their trial. The router will then atomically consume it.
-    
+    # 2. Check Free Trial status
     # Check trial flag in app_metadata (if synced) or user_metadata
     has_used_trial = app_meta.get("has_used_trial", False) or user_meta.get("has_used_trial", False)
     
-    if not has_used_trial:
-        # User is in "Trial Phase"
-        return user
+    if has_used_trial:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Free trial expired. Upgrade to Pro for lifetime access.",
+        )
 
-    raise HTTPException(
-        status_code=status.HTTP_403_FORBIDDEN,
-        detail="Free trial expired. Upgrade to Pro for lifetime access.",
-    )
+    # 3. Double check DB for trial if not explicitly marked as used in token
+    # This prevents "double trial" if JWT is old.
+    user_id = user.get("id")
+    if user_id:
+        try:
+            async with httpx.AsyncClient() as client:
+                resp = await client.get(
+                    f"{os.getenv('SUPABASE_URL')}/rest/v1/manin_users?id=eq.{user_id}&select=has_used_trial",
+                    headers={
+                        "Authorization": f"Bearer {os.getenv('SUPABASE_SERVICE_KEY')}",
+                        "apikey": os.getenv("SUPABASE_SERVICE_KEY", ""),
+                    },
+                    timeout=5.0
+                )
+                if resp.status_code == 200 and resp.json():
+                    if resp.json()[0].get("has_used_trial", False):
+                        raise HTTPException(
+                            status_code=status.HTTP_403_FORBIDDEN,
+                            detail="Free trial expired. Upgrade to Pro for lifetime access.",
+                        )
+        except HTTPException:
+            raise
+        except Exception as e:
+            print(f"[Warning] Trial check DB error: {e}")
+
+    # User is in "Trial Phase" (hasn't consumed it yet)
+    return user
 
 
 async def consume_pro_trial(user: dict):
