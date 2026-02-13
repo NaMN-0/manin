@@ -112,13 +112,18 @@ const ManinCompanion = ({ state, message }) => {
 };
 
 
+import { usePostHog } from 'posthog-js/react';
+
 export default function Landing() {
     const { user } = useAuth();
     const navigate = useNavigate();
     const containerRef = useRef(null);
     const [currentScene, setCurrentScene] = useState(0);
+    const posthog = usePostHog();
 
     useEffect(() => {
+        posthog?.capture('viewed_landing');
+
         const handleScroll = () => {
             if (!containerRef.current) return;
             const { scrollTop, scrollHeight, clientHeight } = containerRef.current;
@@ -128,9 +133,10 @@ export default function Landing() {
         const el = containerRef.current;
         if (el) el.addEventListener('scroll', handleScroll);
         return () => { if (el) el.removeEventListener('scroll', handleScroll); };
-    }, []);
+    }, [posthog]);
 
     const handleGetStarted = () => {
+        posthog?.capture('clicked_get_started', { user_status: user ? 'logged_in' : 'guest' });
         navigate(user ? '/market' : '/login');
     };
 

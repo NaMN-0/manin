@@ -10,12 +10,14 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { Link } from 'react-router-dom';
-import SmartLoader from '../components/SmartLoader';
+import NinjaTrainingLoader from '../components/NinjaTrainingLoader';
 import { NinjaCharting, NinjaMeditating, NinjaVictory, NinjaDojo } from '../components/NinjaIllustrations';
 import StockDetailModal from '../components/StockDetailModal';
 import {
     AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer
 } from 'recharts';
+
+import { usePostHog } from 'posthog-js/react';
 
 export default function MarketOverview() {
     const { user } = useAuth();
@@ -26,10 +28,12 @@ export default function MarketOverview() {
     const [tickerResult, setTickerResult] = useState(null);
     const [analyzing, setAnalyzing] = useState(false);
     const [selectedTicker, setSelectedTicker] = useState(null);
+    const posthog = usePostHog();
 
     useEffect(() => {
+        posthog?.capture('viewed_market_overview');
         fetchOverview();
-    }, []);
+    }, [posthog]);
 
     async function fetchOverview() {
         setLoading(true);
@@ -45,6 +49,7 @@ export default function MarketOverview() {
 
     async function analyzeTicker() {
         if (!tickerSearch.trim()) return;
+        posthog?.capture('clicked_analyze_ticker', { ticker: tickerSearch.trim().toUpperCase() });
         setAnalyzing(true);
         setTickerResult(null);
         try {
@@ -61,7 +66,7 @@ export default function MarketOverview() {
             <div className="page" style={{
                 minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', paddingTop: 80
             }}>
-                <SmartLoader />
+                <NinjaTrainingLoader text="Scanning Markets..." />
             </div>
         );
     }
@@ -187,7 +192,7 @@ export default function MarketOverview() {
                             <Search size={18} style={{ verticalAlign: 'middle', marginRight: 8, color: 'var(--primary)' }} />
                             Instant Technical Analysis
                         </h3>
-                        <div style={{ display: 'flex', gap: 12 }}>
+                        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
                             <input
                                 type="text"
                                 value={tickerSearch}
@@ -196,6 +201,7 @@ export default function MarketOverview() {
                                 placeholder="Enter Symbol (e.g. AAPL, NVDA, TSLA)..."
                                 style={{
                                     flex: 1,
+                                    minWidth: 200,
                                     padding: '14px 20px',
                                     background: 'var(--ninja-surface)',
                                     border: '1px solid var(--ninja-border)',
@@ -209,7 +215,7 @@ export default function MarketOverview() {
                                 onFocus={e => e.target.style.borderColor = 'var(--primary)'}
                                 onBlur={e => e.target.style.borderColor = 'var(--ninja-border)'}
                             />
-                            <button className="btn btn-primary" onClick={analyzeTicker} disabled={analyzing} style={{ minWidth: 120 }}>
+                            <button className="btn btn-primary" onClick={analyzeTicker} disabled={analyzing} style={{ minWidth: 120, flex: '1 0 auto' }}>
                                 {analyzing ? 'Scanning...' : 'Analyze'}
                             </button>
                         </div>

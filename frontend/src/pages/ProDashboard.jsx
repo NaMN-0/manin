@@ -10,6 +10,8 @@ import {
 } from '../components/NinjaIllustrations';
 import StockDetailModal from '../components/StockDetailModal';
 
+import { usePostHog } from 'posthog-js/react';
+
 export default function ProDashboard() {
     const [results, setResults] = useState([]);
     const [loading, setLoading] = useState(false);
@@ -17,9 +19,11 @@ export default function ProDashboard() {
     const [selectedStock, setSelectedStock] = useState(null);
     const [logs, setLogs] = useState([]);
     const [showResults, setShowResults] = useState(false);
+    const posthog = usePostHog();
 
     // Initial "Work Already Done" simulation
     useEffect(() => {
+        posthog?.capture('viewed_pro_dashboard');
         const initialLogs = [
             "System initialized...",
             "Connected to NYSE data stream...",
@@ -27,7 +31,7 @@ export default function ProDashboard() {
             "Waiting for command sequence..."
         ];
         setLogs(initialLogs);
-    }, []);
+    }, [posthog]);
 
     async function runScan() {
         if (loading) return;

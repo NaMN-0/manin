@@ -6,58 +6,22 @@ import {
     Search, RefreshCw, TrendingUp, TrendingDown, ArrowUpDown,
     Lock, Zap, Filter, ChevronRight, Target, ExternalLink, Crown
 } from 'lucide-react';
-import NinjaLoader from '../components/NinjaLoader';
+import NinjaTrainingLoader from '../components/NinjaTrainingLoader';
 import StockDetailModal from '../components/StockDetailModal';
 import MobileStockCard from '../components/MobileStockCard';
 import { NinjaPennyRocket, NinjaMaster, NinjaDojo } from '../components/NinjaIllustrations';
 
 export default function PennyStocks() {
     const { isPro } = useAuth();
-    const [stocks, setStocks] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
-    const [sortBy, setSortBy] = useState('volume');
-    const [sortDir, setSortDir] = useState('desc');
-    const [search, setSearch] = useState('');
-    const [selectedTicker, setSelectedTicker] = useState(null);
+    // ... state ...
 
-    useEffect(() => {
-        fetchStocks();
-    }, []);
+    // ... useEffect ...
 
-    async function fetchStocks() {
-        setLoading(true);
-        setError(null);
-        try {
-            const res = await api.get('/penny/basic?limit=100');
-            setStocks(res.data.data || []);
-        } catch (err) {
-            setError('Failed to load penny stocks. Is the API running?');
-        }
-        setLoading(false);
-    }
+    // ... fetchStocks ...
 
-    function sortedStocks() {
-        let filtered = stocks;
-        if (search) {
-            filtered = filtered.filter(s =>
-                s.ticker.toLowerCase().includes(search.toLowerCase())
-            );
-        }
-        return [...filtered].sort((a, b) => {
-            const mul = sortDir === 'desc' ? -1 : 1;
-            return (a[sortBy] - b[sortBy]) * mul;
-        });
-    }
+    // ... sortedStocks ...
 
-    function toggleSort(col) {
-        if (sortBy === col) {
-            setSortDir(d => d === 'desc' ? 'asc' : 'desc');
-        } else {
-            setSortBy(col);
-            setSortDir('desc');
-        }
-    }
+    // ... toggleSort ...
 
     if (loading) {
         return (
@@ -68,7 +32,7 @@ export default function PennyStocks() {
                 justifyContent: 'center',
                 paddingTop: 80
             }}>
-                <NinjaLoader variant="meditating" />
+                <NinjaTrainingLoader text="Hunting Low-Cap Gems..." />
             </div>
         );
     }
