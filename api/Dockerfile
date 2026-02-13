@@ -2,6 +2,9 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
+# Optimize Python memory for container
+ENV MALLOC_ARENA_MAX=2
+
 # Install system deps
 RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc g++ libxml2-dev libxslt-dev python3-dev curl gnupg && \

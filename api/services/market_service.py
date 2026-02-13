@@ -7,9 +7,6 @@ import traceback
 from functools import lru_cache
 from typing import Optional
 
-import yfinance as yf
-import pandas as pd
-
 warnings.filterwarnings("ignore")
 
 # Import existing loaders from parent directory
@@ -46,6 +43,7 @@ def get_market_overview() -> dict:
     indices_data = []
     for name, symbol in INDICES.items():
         try:
+            import yfinance as yf
             ticker = yf.Ticker(symbol)
             hist = ticker.history(period="5d")
             if hist.empty or len(hist) < 2:
@@ -99,6 +97,7 @@ def _get_top_movers() -> list:
         "NFLX", "PLTR", "SOFI", "INTC", "BAC", "DIS", "NIO", "RIVN",
     ]
     try:
+        import yfinance as yf
         data = yf.download(watchlist, period="2d", group_by="ticker", threads=True, progress=False)
         movers = []
         for ticker in watchlist:
@@ -130,6 +129,8 @@ def analyze_ticker(ticker: str) -> Optional[dict]:
     """Deep technical analysis on a single ticker (reuses market_server logic)."""
     try:
         import pandas_ta_classic as ta
+        import yfinance as yf
+        import pandas as pd
 
         df = yf.download(ticker, period="6mo", interval="1d", progress=False)
         if df.empty or len(df) < 30:

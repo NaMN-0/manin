@@ -6,10 +6,9 @@ import warnings
 import traceback
 from typing import Optional, List
 
-import yfinance as yf
-import pandas as pd
-import numpy as np
-from sklearn.linear_model import LinearRegression
+import warnings
+import traceback
+from typing import Optional, List
 import pytz
 from datetime import datetime
 
@@ -79,12 +78,14 @@ def get_basic_penny_list(limit: int = 50) -> list:
         batch = tickers[i : i + chunk_size]
         try:
             try:
+                import yfinance as yf
                 # Increased timeout and added error handling
                 data = yf.download(batch, period="5d", group_by="ticker", threads=True, progress=False, timeout=20)
             except (requests.exceptions.Timeout, Exception) as e:
                 print(f"Batch download timeout/error: {e}")
                 # Retry once with longer timeout
                 try:
+                    import yfinance as yf
                     data = yf.download(batch, period="5d", group_by="ticker", threads=True, progress=False, timeout=30)
                 except Exception:
                     print(f"Retry failed for batch {i}")
@@ -106,6 +107,7 @@ def get_basic_penny_list(limit: int = 50) -> list:
                         continue
                         
                     latest = df.iloc[-1]
+                    import pandas as pd
                     if pd.isna(latest["Close"]):
                         continue
                         
@@ -147,9 +149,11 @@ def run_full_scan(limit: int = 100) -> list:
         batch = universe[i : i + chunk_size]
         try:
             try:
+                import yfinance as yf
                 data = yf.download(batch, period="5d", group_by="ticker", threads=True, progress=False, timeout=20)
             except (requests.exceptions.Timeout, Exception):
                 try:
+                    import yfinance as yf
                     data = yf.download(batch, period="5d", group_by="ticker", threads=True, progress=False, timeout=30)
                 except Exception:
                     continue
@@ -168,6 +172,7 @@ def run_full_scan(limit: int = 100) -> list:
                     if df.empty:
                         continue
                     latest = df.iloc[-1]
+                    import pandas as pd
                     if pd.isna(latest["Close"]) or pd.isna(latest["Volume"]):
                         continue
                     p = float(latest["Close"])
@@ -213,6 +218,7 @@ def run_batch_scan(limit: int = 10, offset: int = 0) -> list:
         # Quick check with yfinance on the batch
         # We can reuse the logic from run_full_scan but scoped to this batch
         try:
+             import yfinance as yf
              data = yf.download(batch_tickers, period="5d", group_by="ticker", threads=True, progress=False, timeout=20)
         except Exception:
              return []
@@ -232,6 +238,7 @@ def run_batch_scan(limit: int = 10, offset: int = 0) -> list:
                 if df.empty: continue
                 
                 latest = df.iloc[-1]
+                import pandas as pd
                 if pd.isna(latest["Close"]) or pd.isna(latest["Volume"]): continue
                 
                 p = float(latest["Close"])
@@ -261,6 +268,9 @@ def _deep_analyze(ticker: str, market_progress: float = 1.0) -> Optional[dict]:
     """Deep analysis on a single penny stock."""
     try:
         import pandas_ta_classic as ta
+        import yfinance as yf
+        import pandas as pd
+        import numpy as np
 
         stock = yf.Ticker(ticker)
         df = stock.history(period="6mo")
@@ -309,20 +319,30 @@ def _deep_analyze(ticker: str, market_progress: float = 1.0) -> Optional[dict]:
             projected_vol = current_vol
         avg_vol = float(latest["Vol_SMA_20"]) if not pd.isna(latest["Vol_SMA_20"]) else 1
 
-        # Predictive model
+        # Predictive model (Optimized: swapped sklearn for numpy)
         try:
             data_copy = df.copy()
             data_copy["Target"] = data_copy["Close"].shift(-1)
             data_copy = data_copy.dropna()
+            
+            # Simple linear regression features (using only Close price for lighter calc if needed, 
+            # but sticking to existing logic with numpy linalg)
             feature_cols = ["Open", "High", "Low", "Volume"]
             if "RSI_14" in data_copy.columns:
                 feature_cols.append("RSI_14")
-            X = data_copy[feature_cols]
-            y = data_copy["Target"]
-            model = LinearRegression()
-            model.fit(X, y)
+                
+            X = data_copy[feature_cols].values
+            y = data_copy["Target"].values
+            
+            # Fit linear model using numpy (Least Squares)
+            # y = Xw + b -> y = [X 1] [w; b]
+            X_b = np.c_[X, np.ones((X.shape[0], 1))]  # add bias term
+            theta, residuals, rank, s = np.linalg.lstsq(X_b, y, rcond=None)
+            
             latest_features = latest[feature_cols].values.reshape(1, -1)
-            predicted_price = float(model.predict(latest_features)[0])
+            latest_features_b = np.c_[latest_features, np.ones((1, 1))]
+            
+            predicted_price = float(latest_features_b.dot(theta)[0])
         except Exception:
             predicted_price = float(latest["Close"])
 

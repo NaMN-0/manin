@@ -16,11 +16,15 @@ SUPABASE_URL = os.getenv("SUPABASE_URL", "")
 SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_SERVICE_KEY", "")
 
 def _get_razorpay_client():
+    if not RAZORPAY_KEY_ID or not RAZORPAY_KEY_SECRET:
+        print("[Error] RAZORPAY_KEY_ID or RAZORPAY_KEY_SECRET is missing form environment variables.")
+        raise HTTPException(status_code=500, detail="Razorpay keys not configured on server. Please set RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET in your Render dashboard.")
+
     try:
         import razorpay
         return razorpay.Client(auth=(RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET))
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Razorpay not configured: {e}")
+        raise HTTPException(status_code=500, detail=f"Razorpay client init failed: {e}")
 
 class PaymentVerify(BaseModel):
     razorpay_payment_id: str
