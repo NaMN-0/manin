@@ -65,7 +65,7 @@ export default function LifetimeBanner() {
 
             <style>{`
                 @media (max-width: 600px) {
-                    .container { flex-direction: column; gap: 8px; text-align: center; }
+                    #lifetime-banner .container { flex-direction: column; gap: 8px; text-align: center; }
                 }
             `}</style>
         </div>

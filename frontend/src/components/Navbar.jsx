@@ -265,7 +265,7 @@ export default function Navbar() {
                     .nav-desktop { display: none !important; }
                     .mobile-menu-btn { display: flex !important; }
                     .hide-mobile { display: none !important; }
-                    .navbar-container { padding: 0 16px !important; }
+                    .navbar-container { padding: 0 16px !important; flex-direction: row !important; }
                     .nav-user-section { gap: 8px !important; }
                 }
             `}</style>
