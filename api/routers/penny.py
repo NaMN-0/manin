@@ -66,11 +66,11 @@ async def scan_batch(
 @router.get("/analyze/{ticker}")
 async def analyze_penny(
     ticker: str,
-    user: dict = Depends(require_pro),
+    user: dict = Depends(get_current_user),
 ):
     """
     Deep analysis on a single penny stock.
-    Requires Pro subscription.
+    Requires login.
     """
     result = analyze_single_penny(ticker.upper())
     if result is None:
