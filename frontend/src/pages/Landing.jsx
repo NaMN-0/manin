@@ -260,9 +260,13 @@ export default function Landing() {
                             One Platform. <span style={{ color: '#0ea5e9' }}>Every Level.</span>
                         </h2>
 
-                        {/* Non-symmetric grid: 1fr 1.4fr 0.8fr */}
+                        {/* Improved Grid: responsive and stable */}
                         <div style={{
-                            display: 'grid', gridTemplateColumns: '1fr 1.5fr 0.9fr', gap: 16, alignItems: 'stretch',
+                            display: 'grid',
+                            gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+                            gap: 20,
+                            alignItems: 'stretch',
+                            width: '100%'
                         }}>
 
                             {/* PATH 1: Just Starting Out (left, shorter) */}
@@ -363,8 +367,11 @@ export default function Landing() {
                 {/* ═══ SCENE 5: STRIKE / PROOF ═══ */}
                 <ScrollSection>
                     <div style={{ textAlign: 'center', position: 'relative', width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-                        <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0.06, pointerEvents: 'none' }}>
-                            <span style={{ fontSize: '18vw', fontWeight: 900, color: 'white' }}>SIGNAL</span>
+                        <div style={{
+                            position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            opacity: 0.04, pointerEvents: 'none', zIndex: 0
+                        }}>
+                            <span style={{ fontSize: '22vw', fontWeight: 950, color: 'white', letterSpacing: '-0.05em' }}>SIGNAL</span>
                         </div>
                         <div style={{
                             width: 'min(500px, 80vw)', height: 'min(500px, 70vh)', position: 'relative', zIndex: 10,
@@ -384,14 +391,14 @@ export default function Landing() {
 
                 {/* ═══ SCENE 6: SINGLE CTA ═══ */}
                 <ScrollSection style={{
-                    background: 'rgba(15,23,42,0.5)', backdropFilter: 'blur(4px)',
-                    flexDirection: 'column', justifyContent: 'space-between', paddingBottom: 0
+                    background: 'rgba(15,23,42,0.5)', backdropFilter: 'blur(10px)',
+                    flexDirection: 'column', paddingBottom: 0, minHeight: '120vh' // Slightly taller to allow footer space
                 }}>
                     <div style={{
                         flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                        textAlign: 'center', maxWidth: 600, width: '100%', padding: '0 24px'
+                        textAlign: 'center', maxWidth: 600, width: '100%', padding: '80px 24px'
                     }}>
-                        <div style={{ width: 200, height: 200, margin: '0 auto 32px' }}>
+                        <div style={{ width: 180, height: 180, margin: '0 auto 32px' }}>
                             <NinjaSceneVictory width="100%" height="100%" />
                         </div>
 
@@ -404,7 +411,7 @@ export default function Landing() {
                             Free to start. No credit card. Just smarter trading decisions in under 30 seconds.
                         </p>
 
-                        <button onClick={handleGetStarted} style={{
+                        <button onClick={handleGetStarted} className="shine-effect" style={{
                             padding: '18px 56px', fontSize: 18, fontWeight: 800, borderRadius: 14,
                             background: 'linear-gradient(135deg, #0ea5e9, #38bdf8)', border: 'none',
                             color: 'white', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 12,
@@ -413,12 +420,12 @@ export default function Landing() {
                             Get Started <ArrowRight size={20} />
                         </button>
 
-                        <p style={{ color: '#475569', fontSize: 13, marginTop: 16 }}>
+                        <p style={{ color: '#475569', fontSize: 13, marginTop: 24 }}>
                             Join 1,000+ early adopters
                         </p>
                     </div>
 
-                    <div style={{ width: '100%' }}>
+                    <div style={{ width: '100%', borderTop: '1px solid rgba(255,255,255,0.05)', background: '#050510' }}>
                         <Footer />
                     </div>
                 </ScrollSection>

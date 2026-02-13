@@ -2,18 +2,16 @@ import { useState } from 'react';
 import { Vote, Bell, Check } from 'lucide-react';
 import { usePostHog } from 'posthog-js/react';
 
-export default function FeaturePreviewCard({ title, description, icon: Icon, color = 'var(--primary)', initialVotes = 42 }) {
+export default function FeaturePreviewCard({ title, description, icon: Icon, color = 'var(--primary)', votes, onVote }) {
     const [voted, setVoted] = useState(false);
-    const [votes, setVotes] = useState(initialVotes);
     const posthog = usePostHog();
 
     const handleVote = (e) => {
         e.stopPropagation();
-        if (voted) return;
+        if (voted || !onVote) return;
         setVoted(true);
-        setVotes(v => v + 1);
+        onVote();
         posthog?.capture('voted_feature', { feature: title });
-        // Here you would typically call an API to register interest
     };
 
     return (

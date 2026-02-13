@@ -28,12 +28,43 @@ export default function MarketOverview() {
     const [tickerResult, setTickerResult] = useState(null);
     const [analyzing, setAnalyzing] = useState(false);
     const [selectedTicker, setSelectedTicker] = useState(null);
+    const [meta, setMeta] = useState({});
     const posthog = usePostHog();
 
     useEffect(() => {
         posthog?.capture('viewed_market_overview');
         fetchOverview();
+        fetchMeta();
     }, [posthog]);
+
+    async function fetchMeta() {
+        try {
+            const res = await api.get('/meta');
+            if (res.data?.status === 'ok') {
+                const metaMap = {};
+                res.data.data.forEach(item => {
+                    metaMap[item.key] = item.value_int;
+                });
+                setMeta(metaMap);
+            }
+        } catch (err) {
+            console.error('Failed to fetch meta:', err);
+        }
+    }
+
+    async function handleFeatureVote(key) {
+        try {
+            const res = await api.post(`/meta/increment/${key}`);
+            if (res.data?.status === 'ok') {
+                setMeta(prev => ({
+                    ...prev,
+                    [key]: res.data.newValue
+                }));
+            }
+        } catch (err) {
+            console.error('Failed to increment vote:', err);
+        }
+    }
 
     async function fetchOverview() {
         setLoading(true);
@@ -386,14 +417,16 @@ export default function MarketOverview() {
                             description="Practice with $100k virtual cash. Test your strategies risk-free before entering the real market."
                             icon={Check}
                             color="var(--emerald)"
-                            initialVotes={1240}
+                            votes={meta['votes_paper_trading'] || 1240}
+                            onVote={() => handleFeatureVote('votes_paper_trading')}
                         />
                         <FeaturePreviewCard
                             title="Strategy Backtesting"
                             description="Run your custom indicators against 10 years of historical data. Validate before you trade."
                             icon={Activity}
                             color="var(--primary)"
-                            initialVotes={892}
+                            votes={meta['votes_strategy_backtesting'] || 892}
+                            onVote={() => handleFeatureVote('votes_strategy_backtesting')}
                         />
                     </div>
                 </div>
