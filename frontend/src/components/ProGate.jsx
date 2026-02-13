@@ -8,9 +8,10 @@ import { RandomNinja } from './NinjaIllustrations';
 import CommandCenterConstruction from './CommandCenterConstruction';
 
 export default function ProGate({ children }) {
-    const { isPro, user, checkProStatus } = useAuth();
+    const { isPro, user, checkProStatus, hasUsedTrial } = useAuth();
     const [loading, setLoading] = useState(false);
     const [showConstruction, setShowConstruction] = useState(false);
+    const [bypassGate, setBypassGate] = useState(false);
 
     if (showConstruction) {
         return (
@@ -33,7 +34,7 @@ export default function ProGate({ children }) {
         );
     }
 
-    if (isPro) return children;
+    if (isPro || bypassGate) return children;
 
     async function handleSubscribe() {
         setLoading(true);
@@ -158,9 +159,21 @@ export default function ProGate({ children }) {
                         <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>Limited time offer. Normal price ₹999/mo.</p>
                     </div>
 
-                    <button className="btn btn-primary btn-lg" onClick={handleSubscribe} disabled={loading} style={{ width: '100%', height: 56, fontSize: 16, display: 'flex', justifyContent: 'center', gap: 10 }}>
-                        {loading ? 'Processing...' : <><Zap size={20} fill="currentColor" /> Claim Early Bird Status</>}
-                    </button>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                        <button className="btn btn-primary btn-lg" onClick={handleSubscribe} disabled={loading} style={{ width: '100%', height: 56, fontSize: 16, display: 'flex', justifyContent: 'center', gap: 10 }}>
+                            {loading ? 'Processing...' : <><Zap size={20} fill="currentColor" /> Claim Early Bird Status</>}
+                        </button>
+
+                        {!hasUsedTrial && (
+                            <button
+                                className="btn btn-secondary"
+                                onClick={() => setBypassGate(true)}
+                                style={{ width: '100%', alignItems: 'center', justifyContent: 'center', gap: 8, opacity: 0.8 }}
+                            >
+                                <Rocket size={16} /> Start One-Time Free Scan
+                            </button>
+                        )}
+                    </div>
 
                     <p style={{ fontSize: 12, color: 'var(--text-muted)', textAlign: 'center', marginTop: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
                         <Lock size={12} /> Secure 256-bit encryption

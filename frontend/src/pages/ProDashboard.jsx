@@ -28,6 +28,21 @@ export default function ProDashboard() {
     const { user, checkProStatus } = useAuth();
     const posthog = usePostHog();
 
+    const [selectedTickers, setSelectedTickers] = useState(new Set());
+    const [showNewsModal, setShowNewsModal] = useState(false);
+
+    // Toggle selection
+    const toggleTicker = (ticker) => {
+        const newSet = new Set(selectedTickers);
+        if (newSet.has(ticker)) {
+            newSet.delete(ticker);
+        } else {
+            if (newSet.size >= 20) return; // Limit to 20
+            newSet.add(ticker);
+        }
+        setSelectedTickers(newSet);
+    };
+
     // Initial "Work Already Done" simulation
     useEffect(() => {
         posthog?.capture('viewed_pro_dashboard');
@@ -83,11 +98,14 @@ export default function ProDashboard() {
         }
     }
 
-    async function runNewsAnalysis() {
-        if (newsLoading) return;
+    async function runBatchAnalysis() {
+        if (newsLoading || selectedTickers.size === 0) return;
         setNewsLoading(true);
+        setShowNewsModal(true);
         try {
-            const res = await api.get('/news/intelligence');
+            const res = await api.post('/news/batch', {
+                tickers: Array.from(selectedTickers)
+            });
             if (res.data?.status === 'ok') {
                 setNewsResults(res.data.data);
             }
@@ -95,6 +113,7 @@ export default function ProDashboard() {
             console.error(err);
             if (err.response?.status === 403) {
                 setTrialExpired(true);
+                setShowNewsModal(false);
             }
         } finally {
             setNewsLoading(false);
@@ -181,28 +200,6 @@ export default function ProDashboard() {
                             <div key={i} style={{ opacity: (i + 1) / 6 }}>{log}</div>
                         ))}
                     </div>
-                </div>
-
-                {/* Tab Switcher */}
-                <div style={{ display: 'flex', gap: 10, marginBottom: 32 }}>
-                    <button
-                        onClick={() => { setActiveTab('scan'); setTrialExpired(false); }}
-                        className={`btn ${activeTab === 'scan' ? 'btn-primary' : 'btn-secondary'}`}
-                        style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 24px' }}
-                    >
-                        <Search size={18} /> Deep Scanner
-                    </button>
-                    <button
-                        onClick={() => {
-                            setActiveTab('intelligence');
-                            setTrialExpired(false);
-                            if (newsResults.length === 0) runNewsAnalysis();
-                        }}
-                        className={`btn ${activeTab === 'intelligence' ? 'btn-primary' : 'btn-secondary'}`}
-                        style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 24px' }}
-                    >
-                        <BrainCircuit size={18} /> AI Intelligence
-                    </button>
                 </div>
 
                 {/* Trial Expired / Pro Upgrade Wall */}
@@ -302,6 +299,33 @@ export default function ProDashboard() {
                         {/* 4. Results Phase */}
                         {activeTab === 'scan' && showResults && (
                             <div className="results-grid animate-enter">
+                                {/* Batch Analysis Controls */}
+                                <div style={{
+                                    position: 'sticky', top: 20, zIndex: 100,
+                                    background: 'rgba(5, 5, 16, 0.95)', backdropFilter: 'blur(10px)',
+                                    borderRadius: 16, padding: '12px 24px', border: '1px solid var(--primary-dark)',
+                                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                                    marginBottom: 30, boxShadow: '0 10px 30px rgba(0,0,0,0.5)'
+                                }}>
+                                    <div style={{ fontSize: 14, color: 'var(--text-secondary)' }}>
+                                        Select stocks for <span className="text-primary font-bold">Deep Sentiment Analysis</span>
+                                        {selectedTickers.size > 0 && <span style={{ marginLeft: 10, color: 'white', fontWeight: 700 }}>{selectedTickers.size} selected</span>}
+                                    </div>
+                                    <div>
+                                        {selectedTickers.size > 0 ? (
+                                            <button
+                                                className="btn btn-primary"
+                                                onClick={runBatchAnalysis}
+                                                style={{ display: 'flex', alignItems: 'center', gap: 8 }}
+                                            >
+                                                <BrainCircuit size={16} /> Analyze Sentiment
+                                            </button>
+                                        ) : (
+                                            <div style={{ fontSize: 12, color: 'var(--text-muted)', fontStyle: 'italic' }}>Select up to 20 tickers</div>
+                                        )}
+                                    </div>
+                                </div>
+
                                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16, marginBottom: 40 }}>
                                     <StatBox label="Total Scanned" value={results.length} icon={NinjaHeadOne} color="var(--text-primary)" />
                                     <StatBox label="Profitable" value={profitable.length} icon={NinjaSuccess} color="var(--emerald)" />
@@ -312,7 +336,14 @@ export default function ProDashboard() {
                                     <Section title="Profitable Gems (Founding Alpha)" icon={Award} color="var(--emerald)">
                                         <div className="card-grid">
                                             {profitable.map((stock, i) => (
-                                                <StockResultCard key={i} stock={stock} onSelect={() => setSelectedStock(stock)} highlight />
+                                                <StockResultCard
+                                                    key={i}
+                                                    stock={stock}
+                                                    onSelect={() => setSelectedStock(stock)}
+                                                    highlight
+                                                    selected={selectedTickers.has(stock.ticker)}
+                                                    onToggleSelect={() => toggleTicker(stock.ticker)}
+                                                />
                                             ))}
                                         </div>
                                     </Section>
@@ -321,22 +352,56 @@ export default function ProDashboard() {
                                     <Section title="High Risk / High Reward (Moonshots)" icon={Zap} color="var(--crimson)">
                                         <div className="card-grid">
                                             {speculative.map((stock, i) => (
-                                                <StockResultCard key={i} stock={stock} onSelect={() => setSelectedStock(stock)} />
+                                                <StockResultCard
+                                                    key={i}
+                                                    stock={stock}
+                                                    onSelect={() => setSelectedStock(stock)}
+                                                    selected={selectedTickers.has(stock.ticker)}
+                                                    onToggleSelect={() => toggleTicker(stock.ticker)}
+                                                />
                                             ))}
                                         </div>
                                     </Section>
                                 )}
                                 <div style={{ textAlign: 'center', marginTop: 40 }}>
-                                    <button onClick={() => setShowResults(false)} className="btn btn-secondary">New Scan</button>
+                                    <button onClick={() => { setShowResults(false); setSelectedTickers(new Set()); }} className="btn btn-secondary">New Scan</button>
                                 </div>
                             </div>
                         )}
-
-                        {/* 5. Intelligence Tab */}
-                        {activeTab === 'intelligence' && (
-                            <NewsIntelligence data={newsResults} loading={newsLoading} />
-                        )}
                     </>
+                )}
+
+                {/* News Intelligence Modal */}
+                {showNewsModal && (
+                    <div style={{
+                        position: 'fixed', inset: 0, zIndex: 1000,
+                        background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(5px)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', p: 4
+                    }}>
+                        <div className="glass-card" style={{
+                            width: '90%', maxWidth: 1000, maxHeight: '90vh', overflowY: 'auto',
+                            position: 'relative', border: '1px solid var(--primary-dark)',
+                            boxShadow: '0 0 50px rgba(14, 165, 233, 0.2)'
+                        }}>
+                            <div style={{
+                                position: 'sticky', top: 0, zIndex: 10, background: '#0f172a',
+                                padding: '20px', borderBottom: '1px solid var(--ninja-border)',
+                                display: 'flex', justifyContent: 'space-between', alignItems: 'center'
+                            }}>
+                                <h2 style={{ fontSize: 24, fontWeight: 800, color: 'white' }}>Sentiment Analysis Results</h2>
+                                <div style={{ display: 'flex', gap: 12 }}>
+                                    <button className="btn btn-secondary" onClick={() => {
+                                        setNewsResults([]);
+                                        runBatchAnalysis();
+                                    }}>Refresh</button>
+                                    <button className="btn btn-primary" onClick={() => setShowNewsModal(false)}>Close</button>
+                                </div>
+                            </div>
+                            <div style={{ padding: 20 }}>
+                                <NewsIntelligence data={newsResults} loading={newsLoading} />
+                            </div>
+                        </div>
+                    </div>
                 )}
 
                 {selectedStock && (
@@ -386,28 +451,39 @@ const Section = ({ title, icon: Icon, children, color }) => (
     </div>
 );
 
-function StockResultCard({ stock, onSelect, highlight = false }) {
+function StockResultCard({ stock, onSelect, highlight = false, selected, onToggleSelect }) {
     const isUp = stock.upside > 0;
     return (
-        <div className="glass-card stock-card-interactive" onClick={onSelect} style={{
+        <div className="glass-card stock-card-interactive" style={{
             cursor: 'pointer', padding: 20, position: 'relative', overflow: 'hidden',
-            border: highlight ? `1px solid ${isUp ? 'var(--emerald)' : 'var(--crimson)'}` : undefined
+            border: selected ? '2px solid var(--primary)' : highlight ? `1px solid ${isUp ? 'var(--emerald)' : 'var(--crimson)'}` : undefined,
+            background: selected ? 'rgba(14, 165, 233, 0.1)' : undefined
         }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
-                <div>
-                    <div style={{ fontSize: 20, fontWeight: 900, fontFamily: 'monospace' }}>{stock.ticker}</div>
-                    <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>Score: {stock.score}/10</div>
-                </div>
-                <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontSize: 18, fontWeight: 700 }}>${stock.price}</div>
-                    <div style={{ color: isUp ? 'var(--emerald)' : 'var(--crimson)', fontWeight: 700 }}>
-                        {isUp ? '+' : ''}{stock.upside}%
+            <div style={{ position: 'absolute', top: 10, right: 10, zIndex: 10 }}>
+                <input
+                    type="checkbox"
+                    checked={selected || false}
+                    onChange={(e) => { e.stopPropagation(); onToggleSelect(); }}
+                    style={{ width: 18, height: 18, cursor: 'pointer', accentColor: 'var(--primary)' }}
+                />
+            </div>
+            <div onClick={onSelect}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
+                    <div>
+                        <div style={{ fontSize: 20, fontWeight: 900, fontFamily: 'monospace' }}>{stock.ticker}</div>
+                        <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>Score: {stock.score}/10</div>
+                    </div>
+                    <div style={{ textAlign: 'right', paddingRight: 20 }}>
+                        <div style={{ fontSize: 18, fontWeight: 700 }}>${stock.price}</div>
+                        <div style={{ color: isUp ? 'var(--emerald)' : 'var(--crimson)', fontWeight: 700 }}>
+                            {isUp ? '+' : ''}{stock.upside}%
+                        </div>
                     </div>
                 </div>
-            </div>
-            <div style={{ background: 'rgba(0,0,0,0.3)', padding: 10, borderRadius: 8, fontSize: 13, display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: 'var(--text-muted)' }}>AI Target:</span>
-                <span style={{ color: 'var(--sky)', fontWeight: 700 }}>${stock.predicted}</span>
+                <div style={{ background: 'rgba(0,0,0,0.3)', padding: 10, borderRadius: 8, fontSize: 13, display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ color: 'var(--text-muted)' }}>AI Target:</span>
+                    <span style={{ color: 'var(--sky)', fontWeight: 700 }}>${stock.predicted}</span>
+                </div>
             </div>
         </div>
     );
