@@ -88,7 +88,10 @@ export default function Navbar() {
                     </Link>
 
                     {/* Desktop Nav */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }} className="nav-desktop">
+                    <div style={{
+                        display: 'flex', alignItems: 'center', gap: 4,
+                        position: 'absolute', left: '50%', transform: 'translateX(-50%)'
+                    }} className="nav-desktop">
                         {navLinks.map(link => {
                             if (link.auth && !user) return null;
                             if (link.hideOnAuth && user) return null;

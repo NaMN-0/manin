@@ -30,7 +30,7 @@ export default function LifetimeBanner() {
                         LIFETIME
                     </div>
                     <span style={{ fontWeight: 600 }}>
-                        Get <span style={{ color: 'var(--primary)' }}>Founder Status</span> for just ₹999.
+                        Get <span style={{ color: 'var(--primary)' }}>Early Bird Access</span> for just ₹999.
                     </span>
                 </div>
 
