@@ -78,6 +78,7 @@ export default function NinjaTrainingLoader({ text = "Training Models..." }) {
                 zIndex: 10,
                 textAlign: 'center',
                 height: 64,
+                width: 300,
                 display: 'flex',
                 flexDirection: 'column',
                 justifyContent: 'center'
