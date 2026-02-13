@@ -22,7 +22,7 @@ export default function LifetimeBanner() {
             borderBottom: '1px solid var(--primary)',
             padding: '8px 16px',
             position: 'relative',
-            zIndex: 99
+            zIndex: 1100
         }}>
             <div className="container" style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 16,

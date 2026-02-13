@@ -62,7 +62,7 @@ export default function Navbar() {
     return (
         <>
             <nav style={{
-                position: 'sticky', top: 0, left: 0, right: 0, zIndex: 1000,
+                position: 'sticky', top: 'var(--banner-height, 0px)', left: 0, right: 0, zIndex: 1000,
                 background: mobileOpen ? '#05050a' : 'rgba(10, 10, 15, 0.85)', // Solid background when menu open
                 backdropFilter: 'blur(20px)',
                 borderBottom: mobileOpen ? 'none' : '1px solid var(--ninja-border)', // Remove border when menu connects

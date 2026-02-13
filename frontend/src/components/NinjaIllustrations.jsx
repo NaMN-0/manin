@@ -451,11 +451,76 @@ export function NinjaHeroVictory({ width = 120, height = 120, className }) {
 export const NinjaHeroConfused = NinjaHeroIdle;
 export const NinjaHeroGlitch = NinjaHeroIdle;
 
+// 💎 PREMIUM ILLUSTRATIONS
+export function NinjaEliteUpgrade({ width = 300, height = 300, className }) {
+    return (
+        <svg width={width} height={height} viewBox="-150 -150 300 300" className={className}>
+            <CommonDefs />
+            {/* Background Atmosphere */}
+            <circle cx="0" cy="0" r="140" fill="none" stroke={C.primary} strokeWidth="0.5" strokeDasharray="1 5" opacity="0.2" />
+            <circle cx="0" cy="0" r="100" fill="none" stroke={C.gold} strokeWidth="1" strokeDasharray="10 10" opacity="0.1">
+                <animateTransform attributeName="transform" type="rotate" from="0 0 0" to="360 0 0" dur="20s" repeatCount="indefinite" />
+            </circle>
+
+            {/* Power Core / Platforms */}
+            <ellipse cx="0" cy="80" rx="60" ry="15" fill={C.primary} opacity="0.1" filter="url(#glow)" />
+            <ellipse cx="0" cy="85" rx="40" ry="8" fill={C.primary} opacity="0.2" />
+
+            {/* Floating Data Modules */}
+            <g transform="translate(-80, -40)">
+                <animateTransform attributeName="transform" type="translate" values="-80 -40; -80 -50; -80 -40" dur="4s" repeatCount="indefinite" />
+                <rect x="-20" y="-15" width="40" height="30" rx="4" fill={C.suitDark} stroke={C.primary} strokeWidth="1" opacity="0.6" />
+                <path d="M-10 0 H10 M-10 5 H5" stroke={C.primary} strokeWidth="1" opacity="0.8" />
+                <circle cx="15" cy="-8" r="2" fill={C.success} />
+            </g>
+            <g transform="translate(80, -60)">
+                <animateTransform attributeName="transform" type="translate" values="80 -60; 80 -50; 80 -60" dur="5s" repeatCount="indefinite" />
+                <rect x="-25" y="-20" width="50" height="40" rx="4" fill={C.suitDark} stroke={C.gold} strokeWidth="1" opacity="0.6" />
+                <Candle x={0} y={0} type="green" height={20} scale={0.6} />
+                <path d="M-15 -10 L15 -10" stroke={C.gold} strokeWidth="1" opacity="0.4" />
+            </g>
+
+            {/* Main Hero Aura */}
+            <circle cx="0" cy="0" r="50" fill="url(#goldGrad)" opacity="0.05" filter="url(#glow)">
+                <animate attributeName="r" values="50;55;50" dur="2s" repeatCount="indefinite" />
+            </circle>
+
+            {/* Hero Ninja - Elite Pose */}
+            <g transform="translate(0, 10)">
+                <RoboBody x={0} y={0} color={C.gold} />
+                <NinjaHead x={0} y={-15} expression="cyber" scale={1.2} />
+
+                {/* Elite Mantle / Energy Wings */}
+                <path d="M-20 -5 Q-60 -40 -40 -60 Q-20 -40 -20 -5" fill={C.primary} opacity="0.15" />
+                <path d="M20 -5 Q60 -40 40 -60 Q20 -40 20 -5" fill={C.primary} opacity="0.15" />
+
+                {/* Holding a glowing orb of data */}
+                <g transform="translate(0, -60)">
+                    <circle cx="0" cy="0" r="12" fill="white" filter="url(#glow)">
+                        <animate attributeName="opacity" values="0.4;0.9;0.4" dur="1.5s" repeatCount="indefinite" />
+                    </circle>
+                    <path d="M-8 -8 L8 8 M8 -8 L-8 8" stroke={C.primary} strokeWidth="1" />
+                </g>
+            </g>
+
+            {/* Connection Rays */}
+            <g opacity="0.3">
+                <line x1="0" y1="-50" x2="-60" y2="-40" stroke={C.primary} strokeWidth="0.5" strokeDasharray="2 2">
+                    <animate attributeName="stroke-dashoffset" values="0;20" dur="10s" repeatCount="indefinite" />
+                </line>
+                <line x1="0" y1="-50" x2="60" y2="-60" stroke={C.gold} strokeWidth="0.5" strokeDasharray="2 2">
+                    <animate attributeName="stroke-dashoffset" values="20;0" dur="10s" repeatCount="indefinite" />
+                </line>
+            </g>
+        </svg>
+    );
+}
+
 // 🎲 Randomizer
 const ALL_ILLUSTRATIONS = [
     NinjaSceneVoid, NinjaSceneSwarm, NinjaSceneAlgo, NinjaSceneStrike, NinjaSceneVictory,
     NinjaDiamond, NinjaSpeed, NinjaShield, NinjaRocket,
-    NinjaCoffee, NinjaMaster, NinjaPop
+    NinjaCoffee, NinjaMaster, NinjaPop, NinjaEliteUpgrade
 ];
 
 // 🚀 NEW COMPONENTS (Requested)

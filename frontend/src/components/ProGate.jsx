@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import { Lock, Zap, Crown, Check, Star, Rocket } from 'lucide-react';
 import api from '../lib/api';
 import { useState } from 'react';
-import { RandomNinja } from './NinjaIllustrations';
+import { NinjaEliteUpgrade } from './NinjaIllustrations';
 import CommandCenterConstruction from './CommandCenterConstruction';
 
 export default function ProGate({ children }) {
@@ -116,7 +116,7 @@ export default function ProGate({ children }) {
                     borderRight: '1px solid var(--ninja-border)'
                 }}>
                     <div style={{ marginBottom: 32 }}>
-                        <RandomNinja width={200} height={200} />
+                        <NinjaEliteUpgrade width={280} height={280} />
                     </div>
                     <h2 style={{ fontSize: 28, fontWeight: 900, marginBottom: 12 }}>Early Bird Access</h2>
                     <p style={{ color: 'var(--text-secondary)', lineHeight: 1.6, maxWidth: 320 }}>
