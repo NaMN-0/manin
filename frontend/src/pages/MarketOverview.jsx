@@ -186,8 +186,8 @@ export default function MarketOverview() {
                 </div>
 
                 {/* Ticker Search Analysis */}
-                <div className="glass-card" style={{ marginBottom: 48, padding: 0, overflow: 'hidden', border: '1px solid var(--ninja-border)' }}>
-                    <div style={{ borderBottom: '1px solid var(--ninja-border)', padding: 24, background: 'rgba(255,255,255,0.02)' }}>
+                <div className="glass-card search-card" style={{ marginBottom: 48, padding: 0, overflow: 'hidden', border: '1px solid var(--ninja-border)' }}>
+                    <div style={{ borderBottom: '1px solid var(--ninja-border)', padding: ' clamp(16px, 4vw, 24px)', background: 'rgba(255,255,255,0.02)' }}>
                         <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 16 }}>
                             <Search size={18} style={{ verticalAlign: 'middle', marginRight: 8, color: 'var(--primary)' }} />
                             Instant Technical Analysis
@@ -200,9 +200,8 @@ export default function MarketOverview() {
                                 onKeyDown={e => e.key === 'Enter' && analyzeTicker()}
                                 placeholder="Enter Symbol (e.g. AAPL, NVDA, TSLA)..."
                                 style={{
-                                    flex: 1,
-                                    minWidth: 200,
-                                    padding: '14px 20px',
+                                    flex: '1 1 200px',
+                                    padding: '12px 16px',
                                     background: 'var(--ninja-surface)',
                                     border: '1px solid var(--ninja-border)',
                                     borderRadius: 'var(--radius-md)',
@@ -215,7 +214,7 @@ export default function MarketOverview() {
                                 onFocus={e => e.target.style.borderColor = 'var(--primary)'}
                                 onBlur={e => e.target.style.borderColor = 'var(--ninja-border)'}
                             />
-                            <button className="btn btn-primary" onClick={analyzeTicker} disabled={analyzing} style={{ minWidth: 120, flex: '1 0 auto' }}>
+                            <button className="btn btn-primary" onClick={analyzeTicker} disabled={analyzing} style={{ flex: '1 1 120px' }}>
                                 {analyzing ? 'Scanning...' : 'Analyze'}
                             </button>
                         </div>
@@ -422,6 +421,7 @@ export default function MarketOverview() {
                     .container { padding: 0 20px !important; }
                     h1 { font-size: 28px !important; }
                     .glass-card { padding: 16px !important; }
+                    .search-card { padding: 0 !important; }
                     
                     /* Hide Ambient Background */
                     div[style*="opacity: 0.03"] { display: none !important; }
