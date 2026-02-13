@@ -8,10 +8,16 @@ export default function LifetimeBanner() {
     const { isPro, user } = useAuth();
     const [visible, setVisible] = useState(true);
 
+    useEffect(() => {
+        const height = (visible && !isPro && user) ? document.getElementById('lifetime-banner')?.offsetHeight || 0 : 0;
+        document.documentElement.style.setProperty('--banner-height', `${height}px`);
+        return () => document.documentElement.style.setProperty('--banner-height', '0px');
+    }, [visible, isPro, user]);
+
     if (!user || isPro || !visible) return null;
 
     return (
-        <div style={{
+        <div id="lifetime-banner" style={{
             background: 'linear-gradient(90deg, #0f172a 0%, #1e293b 100%)',
             borderBottom: '1px solid var(--primary)',
             padding: '8px 16px',

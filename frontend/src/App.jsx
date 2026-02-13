@@ -33,8 +33,8 @@ function App() {
     <BrowserRouter>
       <AuthProvider>
         <ScrollToTop /> {/* Add ScrollToTop here */}
-        <Navbar />
         <LifetimeBanner />
+        <Navbar />
         <Routes>
           {/* Landing Page - custom layout (manages its own footer/scroll) */}
           <Route path="/" element={<Landing />} />

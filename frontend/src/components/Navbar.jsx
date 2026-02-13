@@ -191,7 +191,7 @@ export default function Navbar() {
 
             {/* Mobile Nav Overlay */}
             <div style={{
-                position: 'fixed', inset: 0, top: 64, zIndex: 999,
+                position: 'fixed', inset: 0, top: 'calc(64px + var(--banner-height, 0px))', zIndex: 999,
                 background: '#05050a', // Solid background to match header
                 transform: mobileOpen ? 'translateY(0)' : 'translateY(-100%)',
                 opacity: mobileOpen ? 1 : 0,

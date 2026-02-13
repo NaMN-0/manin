@@ -23,7 +23,7 @@ export default function Login() {
             localStorage.removeItem('user_intent');
             return <Navigate to="/pro" replace />;
         }
-        return <Navigate to="/penny" replace />;
+        return <Navigate to="/welcome" replace />;
     }
 
     return (

@@ -190,7 +190,7 @@ export default function MarketOverview() {
                     <div style={{ borderBottom: '1px solid var(--ninja-border)', padding: ' clamp(16px, 4vw, 24px)', background: 'rgba(255,255,255,0.02)' }}>
                         <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 16 }}>
                             <Search size={18} style={{ verticalAlign: 'middle', marginRight: 8, color: 'var(--primary)' }} />
-                            Instant Technical Analysis
+                            Quick Market Scan
                         </h3>
                         <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
                             <input
@@ -215,7 +215,7 @@ export default function MarketOverview() {
                                 onBlur={e => e.target.style.borderColor = 'var(--ninja-border)'}
                             />
                             <button className="btn btn-primary" onClick={analyzeTicker} disabled={analyzing} style={{ flex: '1 1 120px' }}>
-                                {analyzing ? 'Scanning...' : 'Analyze'}
+                                {analyzing ? 'Scanning...' : 'Scan Now'}
                             </button>
                         </div>
                     </div>
@@ -238,12 +238,14 @@ export default function MarketOverview() {
 
                                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 24 }}>
                                         <div className="metric-box">
-                                            <div className="label">RSI (14)</div>
-                                            <div className="val">{tickerResult.rsi}</div>
+                                            <div className="metric-label">Momentum Score</div>
+                                            <div className="metric-value" style={{ color: tickerResult.rsi > 70 ? 'var(--crimson)' : tickerResult.rsi < 30 ? 'var(--emerald)' : 'inherit' }}>
+                                                {tickerResult.rsi.toFixed(1)}
+                                            </div>
                                         </div>
                                         <div className="metric-box">
-                                            <div className="label">AI Score</div>
-                                            <div className="val">{tickerResult.score}/4</div>
+                                            <div className="metric-label">Trend Direction</div>
+                                            <div className="metric-value">{tickerResult.macd > 0 ? 'Bullish' : 'Bearish'} Flow</div>
                                         </div>
                                     </div>
 
@@ -274,6 +276,9 @@ export default function MarketOverview() {
                                     </div>
 
                                     <div style={{ height: 250, background: 'rgba(0,0,0,0.2)', borderRadius: 16, padding: 16, border: '1px solid var(--ninja-border)' }}>
+                                        <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
+                                            <Activity size={14} /> PRICE MOVEMENT (LATEST TREND)
+                                        </div>
                                         <ResponsiveContainer width="100%" height="100%">
                                             <AreaChart data={tickerResult.priceHistory}>
                                                 <defs>

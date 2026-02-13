@@ -165,7 +165,7 @@ function StockDetailModal({ ticker, initialData, onClose }) {
                                 highlight={true}
                             />
                             <MetricCard
-                                label="Intel Score"
+                                label="Intel Confidence Rating"
                                 value={`${data.score}/10`}
                                 color="var(--sky)"
                             />
@@ -176,11 +176,11 @@ function StockDetailModal({ ticker, initialData, onClose }) {
                         {chartData.length > 0 && <StockChart data={chartData} />}
 
                         {/* Deep Data Grid */}
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 32, marginBottom: 32 }}>
-                            {/* Fundamentals */}
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 32, marginBottom: 32 }}>
+                            {/* Company Health */}
                             <div>
                                 <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
-                                    <BarChart3 size={20} color="var(--amber)" /> Fundamentals
+                                    <BarChart3 size={20} color="var(--amber)" /> Company Health
                                 </h3>
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                                     <DataRow label="Market Cap" value={`$${(data.marketCap / 1000000).toFixed(1)}M`} />
@@ -192,12 +192,23 @@ function StockDetailModal({ ticker, initialData, onClose }) {
                                 </div>
                             </div>
 
-                            {/* Signals */}
+                            {/* Signals & Momentum */}
                             <div>
                                 <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
-                                    <Zap size={20} color="var(--primary)" /> AI Signals
+                                    <Zap size={20} color="var(--primary)" /> Pattern Analysis
                                 </h3>
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                                        <div className="metric-box" style={{ background: 'var(--ninja-surface)', padding: '12px 16px', borderRadius: 12, border: '1px solid var(--ninja-border)' }}>
+                                            <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 4 }}>Momentum Score</div>
+                                            <div style={{ fontSize: 18, fontWeight: 700, color: data.rsi > 70 ? 'var(--crimson)' : data.rsi < 30 ? 'var(--emerald)' : 'white' }}>{data.rsi}</div>
+                                        </div>
+                                        <div className="metric-box" style={{ background: 'var(--ninja-surface)', padding: '12px 16px', borderRadius: 12, border: '1px solid var(--ninja-border)' }}>
+                                            <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 4 }}>Trend Flow</div>
+                                            <div style={{ fontSize: 18, fontWeight: 700 }}>{data.macd > 0 ? 'Bullish' : 'Bearish'}</div>
+                                        </div>
+                                    </div>
+
                                     {data.signals && data.signals.length > 0 ? (
                                         data.signals.map((sig, i) => (
                                             <div key={i} style={{
@@ -215,7 +226,7 @@ function StockDetailModal({ ticker, initialData, onClose }) {
                                             </div>
                                         ))
                                     ) : (
-                                        <div style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>No active signals derived.</div>
+                                        <div style={{ color: 'var(--text-muted)', fontStyle: 'italic', fontSize: 14 }}>No immediate patterns detected.</div>
                                     )}
                                 </div>
                             </div>

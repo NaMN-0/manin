@@ -73,7 +73,7 @@ export default function PennyStocks() {
                 justifyContent: 'center',
                 paddingTop: 80
             }}>
-                <NinjaTrainingLoader text="Hunting Low-Cap Gems..." />
+                <NinjaTrainingLoader text="Finding hidden opportunities..." />
             </div>
         );
     }
@@ -107,11 +107,11 @@ export default function PennyStocks() {
                             }}>
                                 <Target size={28} color="var(--amber)" />
                             </div>
-                            Penny Stock <span className="text-gradient">Scanner</span>
+                            Small Cap <span className="text-gradient">Explorer</span>
                         </h1>
                         <p style={{ color: 'var(--text-secondary)', fontSize: 16, lineHeight: 1.6, maxWidth: 600 }}>
-                            Scanning <strong>{stocks.length}</strong> high-volatility assets under $5.
-                            Uses <strong>Momemtum v2</strong> algorithm to detect breakouts before they happen.
+                            Monitoring <strong>{stocks.length}</strong> active symbols under $5.
+                            Uses <strong>Momentum v2</strong> logic to detect patterns before they break out.
                         </p>
                     </div>
 
@@ -203,17 +203,17 @@ export default function PennyStocks() {
                                     <thead>
                                         <tr>
                                             <th onClick={() => toggleSort('ticker')} className="sortable-th">
-                                                Ticker <ArrowUpDown size={12} />
+                                                Symbol <ArrowUpDown size={12} />
                                             </th>
                                             <th onClick={() => toggleSort('price')} className="sortable-th">
-                                                Price <ArrowUpDown size={12} />
+                                                Current Price <ArrowUpDown size={12} />
                                             </th>
                                             <th onClick={() => toggleSort('volume')} className="sortable-th">
-                                                Volume <ArrowUpDown size={12} />
+                                                Activity <ArrowUpDown size={12} />
                                             </th>
-                                            <th className="hide-mobile">24h High</th>
-                                            <th className="hide-mobile">24h Low</th>
-                                            <th className="hide-mobile">Volatility</th>
+                                            <th className="hide-mobile">Day High</th>
+                                            <th className="hide-mobile">Day Low</th>
+                                            <th className="hide-mobile">Movement</th>
                                         </tr>
                                     </thead>
                                     <tbody>

@@ -46,7 +46,7 @@ export default function Onboarding() {
                         margin: '0 auto 40px',
                         lineHeight: 1.6
                     }}>
-                        Your initiation is complete. Master these three tools to conquer the market.
+                        The path to market mastery starts here. Master these three tools to find your edge.
                     </p>
                 </div>
             </div>
@@ -80,7 +80,7 @@ export default function Onboarding() {
                             transition: 'transform 0.2s', cursor: 'pointer'
                         }}>
                             <div style={{ flex: 1 }}>
-                                <h3 style={{ fontSize: 24, fontWeight: 800, marginBottom: 8, color: 'white' }}>Check the Pulse</h3>
+                                <h3 style={{ fontSize: 24, fontWeight: 800, marginBottom: 8, color: 'white' }}>Quick Market Scan</h3>
                                 <p style={{ color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: 16 }}>
                                     Start at the <strong>Market Overview</strong>. See what's moving real-time and analyze any ticker for an instant AI scorecard.
                                 </p>
@@ -116,7 +116,7 @@ export default function Onboarding() {
                             transition: 'transform 0.2s', cursor: 'pointer'
                         }}>
                             <div style={{ flex: 1 }}>
-                                <h3 style={{ fontSize: 24, fontWeight: 800, marginBottom: 8, color: 'white' }}>Find Hidden Gems</h3>
+                                <h3 style={{ fontSize: 24, fontWeight: 800, marginBottom: 8, color: 'white' }}>Growth Opportunities</h3>
                                 <p style={{ color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: 16 }}>
                                     Visit <strong>Penny Stocks</strong> to see curated lists of huge movers. High risk, but high reward for the disciplined ninja.
                                 </p>
@@ -153,7 +153,7 @@ export default function Onboarding() {
                             transition: 'transform 0.2s', cursor: 'pointer'
                         }}>
                             <div style={{ flex: 1 }}>
-                                <h3 style={{ fontSize: 24, fontWeight: 800, marginBottom: 8, color: 'white' }}>Summon AI Logic</h3>
+                                <h3 style={{ fontSize: 24, fontWeight: 800, marginBottom: 8, color: 'white' }}>Expert Intelligence</h3>
                                 <p style={{ color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: 16 }}>
                                     The <strong>Command Center</strong> (Pro) is your ultimate weapon. Let AI find the highest probability trades for you instantly.
                                 </p>
