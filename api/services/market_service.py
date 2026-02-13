@@ -98,7 +98,7 @@ def _get_top_movers() -> list:
     ]
     try:
         import yfinance as yf
-        data = yf.download(watchlist, period="2d", group_by="ticker", threads=True, progress=False)
+        data = yf.download(watchlist, period="2d", group_by="ticker", threads=False, progress=False)
         movers = []
         for ticker in watchlist:
             try:

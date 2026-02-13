@@ -41,8 +41,8 @@ def update_market_cache():
 
 @app.on_event("startup")
 def start_scheduler():
-    # Run immediately on startup (5s delay)
-    scheduler.add_job(update_market_cache, 'date', run_date=datetime.now() + timedelta(seconds=5))
+    # Run after 60s to allow health checks to pass first
+    scheduler.add_job(update_market_cache, 'date', run_date=datetime.now() + timedelta(seconds=60))
     # Then every 15 mins
     scheduler.add_job(update_market_cache, 'interval', minutes=15)
     scheduler.start()

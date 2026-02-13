@@ -1,4 +1,3 @@
-import yahoo_fin.stock_info as si
 import pandas as pd
 import os
 import json
@@ -13,22 +12,13 @@ HEADERS = {
 }
 
 def get_sp500_tickers():
-    try: return si.tickers_sp500()
-    except: return []
+    return [] # Deprecated used of sp500 in penny loader
 
 def fetch_nasdaq_tickers_robust():
     """
-    Tries multiple sources to get NASDAQ tickers.
+    Fetches NASDAQ tickers directly from NASDAQ API.
     """
-    # 1. Try yahoo_fin
-    try:
-        print("Fetching via yahoo_fin...")
-        tickers = si.tickers_nasdaq()
-        if tickers: return tickers
-    except Exception as e:
-        print(f"yahoo_fin failed: {e}")
-
-    # 2. Try NASDAQ API directly
+    # 1. Try NASDAQ API directly
     try:
         print("Fetching via NASDAQ API...")
         # This URL returns all stocks on NASDAQ

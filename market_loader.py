@@ -1,4 +1,3 @@
-import yahoo_fin.stock_info as si
 import json
 import os
 import datetime
@@ -14,64 +13,55 @@ HEADERS = {
 }
 
 def get_sp500_tickers():
+    print("Fetching S&P 500 from Wikipedia...")
     try:
-        return si.tickers_sp500()
-    except Exception as e:
-        print(f"yahoo_fin S&P 500 failed: {e}. Trying fallback...")
-        try:
-            url = "https://en.wikipedia.org/wiki/List_of_S%26P_500_companies"
-            response = requests.get(url, headers=HEADERS)
-            response.raise_for_status()
-            table = pd.read_html(io.StringIO(response.text))
-            df = table[0]
-            return df['Symbol'].tolist()
-        except Exception as e2:
-            print(f"Fallback S&P 500 failed: {e2}")
-            return []
+        url = "https://en.wikipedia.org/wiki/List_of_S%26P_500_companies"
+        response = requests.get(url, headers=HEADERS)
+        response.raise_for_status()
+        table = pd.read_html(io.StringIO(response.text))
+        df = table[0]
+        return df['Symbol'].tolist()
+    except Exception as e2:
+        print(f"Fallback S&P 500 failed: {e2}")
+        return []
 
 def get_nasdaq_tickers():
+    print("Fetching NASDAQ 100 from Wikipedia...")
     try:
-        return si.tickers_nasdaq()
-    except Exception as e:
-        print(f"yahoo_fin NASDAQ failed: {e}. Trying fallback...")
-        try:
-             # Fallback for NASDAQ 100 (often what people mean by NASDAQ universe)
-            url = "https://en.wikipedia.org/wiki/Nasdaq-100"
-            response = requests.get(url, headers=HEADERS)
-            response.raise_for_status()
-            table = pd.read_html(io.StringIO(response.text))
-            # Wikipedia NASDAQ-100 table index varies, usually table 4 or class specific
-            # But let's look for a table with 'Ticker' or 'Symbol'
-            for t in table:
-                if 'Ticker' in t.columns:
-                    return t['Ticker'].tolist()
-                elif 'Symbol' in t.columns:
-                    return t['Symbol'].tolist()
-            return []
-        except Exception as e2:
-            print(f"Fallback NASDAQ failed: {e2}")
-            return []
+            # Fallback for NASDAQ 100 (often what people mean by NASDAQ universe)
+        url = "https://en.wikipedia.org/wiki/Nasdaq-100"
+        response = requests.get(url, headers=HEADERS)
+        response.raise_for_status()
+        table = pd.read_html(io.StringIO(response.text))
+        # Wikipedia NASDAQ-100 table index varies, usually table 4 or class specific
+        # But let's look for a table with 'Ticker' or 'Symbol'
+        for t in table:
+            if 'Ticker' in t.columns:
+                return t['Ticker'].tolist()
+            elif 'Symbol' in t.columns:
+                return t['Symbol'].tolist()
+        return []
+    except Exception as e2:
+        print(f"Fallback NASDAQ failed: {e2}")
+        return []
 
 def get_dow_tickers():
+    print("Fetching Dow Jones from Wikipedia...")
     try:
-        return si.tickers_dow()
-    except Exception as e:
-        print(f"yahoo_fin Dow failed: {e}. Trying fallback...")
-        try:
-            url = "https://en.wikipedia.org/wiki/Dow_Jones_Industrial_Average"
-            response = requests.get(url, headers=HEADERS)
-            response.raise_for_status()
-            table = pd.read_html(io.StringIO(response.text))
-            # Usually the first table or second
-            for t in table:
-                if 'Symbol' in t.columns:
-                    return t['Symbol'].tolist()
-                elif 'Ticker' in t.columns:
-                    return t['Ticker'].tolist()
-            return []
-        except Exception as e2:
-            print(f"Fallback Dow failed: {e2}")
-            return []
+        url = "https://en.wikipedia.org/wiki/Dow_Jones_Industrial_Average"
+        response = requests.get(url, headers=HEADERS)
+        response.raise_for_status()
+        table = pd.read_html(io.StringIO(response.text))
+        # Usually the first table or second
+        for t in table:
+            if 'Symbol' in t.columns:
+                return t['Symbol'].tolist()
+            elif 'Ticker' in t.columns:
+                return t['Ticker'].tolist()
+        return []
+    except Exception as e2:
+        print(f"Fallback Dow failed: {e2}")
+        return []
 
 def save_tickers(tickers):
     try:

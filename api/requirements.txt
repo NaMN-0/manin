@@ -12,10 +12,5 @@ pandas-ta-classic
 apscheduler
 supabase>=0.3.59
 numpy>=2.0.0
-plotly>=5.22.0
-textblob>=0.18.0
-GoogleNews>=1.6.14
-yahoo_fin>=0.8.9.1
-requests_html>=0.10.0
 pytz>=2024.1
 requests>=2.31.0

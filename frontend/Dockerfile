@@ -6,7 +6,7 @@ WORKDIR /app
 # Instead, we COPY the .env file and let Vite read it during build.
 
 COPY package*.json ./
-RUN npm ci
+RUN npm install
 
 # Copy all files including .env
 COPY . .

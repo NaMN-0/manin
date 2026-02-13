@@ -80,13 +80,13 @@ def get_basic_penny_list(limit: int = 50) -> list:
             try:
                 import yfinance as yf
                 # Increased timeout and added error handling
-                data = yf.download(batch, period="5d", group_by="ticker", threads=True, progress=False, timeout=20)
+                data = yf.download(batch, period="5d", group_by="ticker", threads=False, progress=False, timeout=20)
             except (requests.exceptions.Timeout, Exception) as e:
                 print(f"Batch download timeout/error: {e}")
                 # Retry once with longer timeout
                 try:
                     import yfinance as yf
-                    data = yf.download(batch, period="5d", group_by="ticker", threads=True, progress=False, timeout=30)
+                    data = yf.download(batch, period="5d", group_by="ticker", threads=False, progress=False, timeout=30)
                 except Exception:
                     print(f"Retry failed for batch {i}")
                     continue
@@ -150,11 +150,11 @@ def run_full_scan(limit: int = 100) -> list:
         try:
             try:
                 import yfinance as yf
-                data = yf.download(batch, period="5d", group_by="ticker", threads=True, progress=False, timeout=20)
+                data = yf.download(batch, period="5d", group_by="ticker", threads=False, progress=False, timeout=20)
             except (requests.exceptions.Timeout, Exception):
                 try:
                     import yfinance as yf
-                    data = yf.download(batch, period="5d", group_by="ticker", threads=True, progress=False, timeout=30)
+                    data = yf.download(batch, period="5d", group_by="ticker", threads=False, progress=False, timeout=30)
                 except Exception:
                     continue
 
@@ -219,7 +219,7 @@ def run_batch_scan(limit: int = 10, offset: int = 0) -> list:
         # We can reuse the logic from run_full_scan but scoped to this batch
         try:
              import yfinance as yf
-             data = yf.download(batch_tickers, period="5d", group_by="ticker", threads=True, progress=False, timeout=20)
+             data = yf.download(batch_tickers, period="5d", group_by="ticker", threads=False, progress=False, timeout=20)
         except Exception:
              return []
 
