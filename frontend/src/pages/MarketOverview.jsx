@@ -122,7 +122,7 @@ export default function MarketOverview() {
     }
 
     return (
-        <div className="page" style={{ paddingBottom: 80 }}>
+        <div id="market-overview-page" className="page" style={{ paddingBottom: 80 }}>
             {/* Ambient Background */}
             <div style={{ position: 'fixed', top: '10%', right: '-15%', opacity: 0.03, pointerEvents: 'none', zIndex: 0 }}>
                 <NinjaCharting width={600} height={600} />
@@ -439,16 +439,16 @@ export default function MarketOverview() {
             )}
 
             <style>{`
-                .metric-box { background: rgba(0,0,0,0.2); padding: 12px; borderRadius: 8px; border: 1px solid var(--ninja-border); }
-                .metric-box .label { font-size: 12px; color: var(--text-muted); margin-bottom: 4px; text-transform: uppercase; }
-                .metric-box .val { font-size: 18px; font-weight: 700; font-family: var(--font-mono); }
+                #market-overview-page .metric-box { background: rgba(0,0,0,0.2); padding: 12px; borderRadius: 8px; border: 1px solid var(--ninja-border); }
+                #market-overview-page .metric-box .label { font-size: 12px; color: var(--text-muted); margin-bottom: 4px; text-transform: uppercase; }
+                #market-overview-page .metric-box .val { font-size: 18px; font-weight: 700; font-family: var(--font-mono); }
                 
-                .verdict-badge { 
+                #market-overview-page .verdict-badge { 
                     display: inline-block; padding: 12px 24px; border-radius: 8px; 
                     font-size: 18px; font-weight: 900; letter-spacing: 1px;
                 }
-                .verdict-badge.strong-buy { background: rgba(16, 185, 129, 0.2); color: var(--emerald-glow); border: 1px solid var(--emerald); }
-                .verdict-badge.watchlist { background: rgba(245, 158, 11, 0.1); color: var(--amber); border: 1px solid var(--amber); }
+                #market-overview-page .verdict-badge.strong-buy { background: rgba(16, 185, 129, 0.2); color: var(--emerald-glow); border: 1px solid var(--emerald); }
+                #market-overview-page .verdict-badge.watchlist { background: rgba(245, 158, 11, 0.1); color: var(--amber); border: 1px solid var(--amber); }
                 
                 @keyframes popIn {
                     from { transform: scale(0) rotate(-10deg); opacity: 0; }
@@ -456,39 +456,39 @@ export default function MarketOverview() {
                 }
 
                 @media (max-width: 768px) {
-                    .container { padding: 0 20px !important; }
-                    h1 { font-size: 28px !important; }
-                    .glass-card { padding: 16px !important; }
-                    .search-card { padding: 0 !important; }
+                    #market-overview-page .container { padding: 0 20px !important; }
+                    #market-overview-page h1 { font-size: 28px !important; }
+                    #market-overview-page .glass-card { padding: 16px !important; }
+                    #market-overview-page .search-card { padding: 0 !important; }
                     
                     /* Hide Ambient Background */
-                    div[style*="opacity: 0.03"] { display: none !important; }
+                    #market-overview-page div[style*="opacity: 0.03"] { display: none !important; }
 
                     /* Header adjustments */
-                    div[style*="justify-content: space-between"] {
+                    #market-overview-page div[style*="justify-content: space-between"] {
                         flex-direction: column !important;
                         align-items: flex-start !important;
                         gap: 16px !important;
                     }
                     
                     /* Metric boxes grid */
-                    div[style*="grid-template-columns: 1fr 1fr"] {
-                        grid-template-columns: 1fr 1fr !important; /* Keep metrics side-by-side if poss, or stack */
+                    #market-overview-page div[style*="grid-template-columns: 1fr 1fr"] {
+                        grid-template-columns: 1fr 1fr !important; 
                         gap: 12px !important;
                     }
 
                     /* Chart Section Stacking */
-                    div[style*="display: flex"][style*="align-items: start"] {
+                    #market-overview-page div[style*="display: flex"][style*="align-items: start"] {
                         flex-direction: column !important;
                     }
-                    div[style*="min-width: 300"] {
+                    #market-overview-page div[style*="min-width: 300"] {
                         width: 100% !important;
                         min-width: auto !important;
                         margin-top: 24px !important;
                     }
 
                     /* Hide Mascot on mobile chart or position it better */
-                    div[style*="animation: popIn"] {
+                    #market-overview-page div[style*="animation: popIn"] {
                         display: none !important; 
                     }
                 }

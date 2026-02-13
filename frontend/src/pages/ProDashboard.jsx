@@ -165,7 +165,7 @@ export default function ProDashboard() {
     };
 
     return (
-        <div className="page" style={{ paddingBottom: 80, minHeight: '100vh', background: '#050510' }}>
+        <div id="pro-dashboard-page" className="page" style={{ paddingBottom: 80, minHeight: '100vh', background: '#050510' }}>
             <div className="container" style={{ padding: '0 20px' }}>
 
                 {/* 1. Header & Live Monitor */}
@@ -414,11 +414,11 @@ export default function ProDashboard() {
             </div>
 
             <style>{`
-                .holo-box { filter: drop-shadow(0 0 10px var(--primary-glow)); }
-                .pulse-dot { width: 8px; height: 8px; background: var(--success); border-radius: 50%; box-shadow: 0 0 5px var(--success); animation: pulse 2s infinite; }
-                .glow-effect:hover { transform: scale(1.05); box-shadow: 0 0 50px var(--primary-glow) !important; }
-                .animate-enter { animation: fadeUp 0.6s ease-out; }
-                .card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
+                #pro-dashboard-page .holo-box { filter: drop-shadow(0 0 10px var(--primary-glow)); }
+                #pro-dashboard-page .pulse-dot { width: 8px; height: 8px; background: var(--success); border-radius: 50%; box-shadow: 0 0 5px var(--success); animation: pulse 2s infinite; }
+                #pro-dashboard-page .glow-effect:hover { transform: scale(1.05); box-shadow: 0 0 50px var(--primary-glow) !important; }
+                #pro-dashboard-page .animate-enter { animation: fadeUp 0.6s ease-out; }
+                #pro-dashboard-page .card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
                 @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.4; } 100% { opacity: 1; } }
                 @keyframes fadeUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
                 @keyframes swarmPulse { from { transform: scale(1); } to { transform: scale(1.08); } }
@@ -427,18 +427,18 @@ export default function ProDashboard() {
                 @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
                 @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
                 @media (max-width: 768px) { 
-                    .card-grid { grid-template-columns: 1fr !important; } 
-                    .command-deck { padding: 32px 16px !important; }
-                    .sentiment-sticky-bar { 
+                    #pro-dashboard-page .card-grid { grid-template-columns: 1fr !important; } 
+                    #pro-dashboard-page .command-deck { padding: 32px 16px !important; }
+                    #pro-dashboard-page .sentiment-sticky-bar { 
                         padding: 16px !important; 
                         flex-direction: column !important; 
                         gap: 16px !important; 
                         text-align: center;
                         margin-bottom: 24px !important;
-                        top: calc(var(--banner-height, 0px) + 74px) !important; /* Slightly closer on tiny screens to save space reached by keyboard etc */
+                        top: calc(var(--banner-height, 0px) + 74px) !important; 
                     }
-                    .sentiment-sticky-bar .btn { width: 100% !important; }
-                    .sentiment-sticky-bar div { font-size: 14px !important; line-height: 1.4; }
+                    #pro-dashboard-page .sentiment-sticky-bar .btn { width: 100% !important; }
+                    #pro-dashboard-page .sentiment-sticky-bar div { font-size: 14px !important; line-height: 1.4; }
                 }
             `}</style>
         </div>

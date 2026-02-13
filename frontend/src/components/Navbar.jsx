@@ -72,27 +72,29 @@ export default function Navbar() {
                     display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: 64, position: 'relative', zIndex: 1001,
                     width: '100%'
                 }}>
-                    {/* Logo */}
-                    <Link to={user ? "/welcome" : "/"} style={{
-                        display: 'flex', alignItems: 'center', gap: 12,
-                        textDecoration: 'none', color: 'var(--text-primary)',
-                        flexShrink: 0
-                    }}>
-                        <TraderNinjaLogo style={{ width: 32, height: 32 }} />
-                        <div style={{ display: 'flex', flexDirection: 'column' }}>
-                            <span style={{ fontSize: 20, fontWeight: 900, letterSpacing: '-0.03em', lineHeight: 1, color: 'white' }}>
-                                KAGE<span className="text-gradient"> AI</span>
-                            </span>
-                            <span style={{ fontSize: 9, color: 'var(--text-muted)', fontWeight: 600, letterSpacing: '0.1em' }} className="hide-mobile">
-                                PRECISION TRADING
-                            </span>
-                        </div>
-                    </Link>
+                    {/* Logo Section */}
+                    <div style={{ flex: '0 0 auto', display: 'flex', alignItems: 'center' }}>
+                        <Link to={user ? "/welcome" : "/"} style={{
+                            display: 'flex', alignItems: 'center', gap: 12,
+                            textDecoration: 'none', color: 'var(--text-primary)',
+                            whiteSpace: 'nowrap'
+                        }}>
+                            <TraderNinjaLogo style={{ width: 32, height: 32, flexShrink: 0 }} />
+                            <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                <span style={{ fontSize: 20, fontWeight: 900, letterSpacing: '-0.03em', lineHeight: 1, color: 'white' }}>
+                                    KAGE<span className="text-gradient"> AI</span>
+                                </span>
+                                <span style={{ fontSize: 9, color: 'var(--text-muted)', fontWeight: 600, letterSpacing: '0.1em' }} className="hide-mobile">
+                                    PRECISION TRADING
+                                </span>
+                            </div>
+                        </Link>
+                    </div>
 
-                    {/* Desktop Nav */}
+                    {/* Desktop Nav Section (Centered) */}
                     <div style={{
-                        display: 'flex', alignItems: 'center', gap: 4,
-                        position: 'absolute', left: '50%', transform: 'translateX(-50%)'
+                        flex: '1 1 auto',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
                     }} className="nav-desktop">
                         {navLinks.map(link => {
                             if (link.auth && !user) return null;
@@ -104,6 +106,7 @@ export default function Navbar() {
                                     background: isActive(link.to) ? 'var(--ninja-surface)' : 'transparent',
                                     textDecoration: 'none', transition: 'all 0.2s',
                                     display: 'flex', alignItems: 'center', gap: 6,
+                                    whiteSpace: 'nowrap'
                                 }}>
                                     {link.icon && <link.icon size={16} />}
                                     {link.label}
@@ -113,8 +116,8 @@ export default function Navbar() {
                         })}
                     </div>
 
-                    {/* User section */}
-                    <div className="nav-user-section" style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                    {/* User Section (Right) */}
+                    <div className="nav-user-section" style={{ flex: '0 0 auto', display: 'flex', alignItems: 'center', gap: 16 }}>
 
                         {/* PRO BADGE */}
                         {isPro ? (
@@ -127,6 +130,7 @@ export default function Navbar() {
                                     background: 'linear-gradient(135deg, #f59e0b, #d97706)', color: '#000',
                                     borderRadius: 20, fontWeight: 700, cursor: 'pointer',
                                     boxShadow: '0 0 12px rgba(245,158,11,0.3)',
+                                    whiteSpace: 'nowrap'
                                 }}>
                                     <Crown size={12} fill="currentColor" /> PRO
                                 </span>
