@@ -68,13 +68,15 @@ export default function Navbar() {
                 borderBottom: mobileOpen ? 'none' : '1px solid var(--ninja-border)', // Remove border when menu connects
                 transition: 'background 0.3s'
             }}>
-                <div className="container" style={{
-                    display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: 64, position: 'relative', zIndex: 1001
+                <div className="container navbar-container" style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: 64, position: 'relative', zIndex: 1001,
+                    width: '100%'
                 }}>
                     {/* Logo */}
                     <Link to={user ? "/welcome" : "/"} style={{
                         display: 'flex', alignItems: 'center', gap: 12,
                         textDecoration: 'none', color: 'var(--text-primary)',
+                        flexShrink: 0
                     }}>
                         <TraderNinjaLogo style={{ width: 32, height: 32 }} />
                         <div style={{ display: 'flex', flexDirection: 'column' }}>
@@ -112,7 +114,7 @@ export default function Navbar() {
                     </div>
 
                     {/* User section */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                    <div className="nav-user-section" style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
 
                         {/* PRO BADGE */}
                         {isPro ? (
@@ -166,6 +168,7 @@ export default function Navbar() {
                             display: 'flex', alignItems: 'center', justifyContent: 'center',
                             border: '2px solid var(--ninja-border)', textDecoration: 'none',
                             transition: 'border-color 0.2s',
+                            flexShrink: 0
                         }}>
                             {googleAvatar && !imgError ? (
                                 <img src={googleAvatar} alt="Profile" onError={() => setImgError(true)}
@@ -182,7 +185,7 @@ export default function Navbar() {
                         {/* Mobile menu Button */}
                         <button className="btn btn-ghost mobile-menu-btn"
                             onClick={() => setMobileOpen(!mobileOpen)}
-                            style={{ display: 'none', padding: 8, color: mobileOpen ? 'var(--primary)' : 'var(--text-secondary)' }}>
+                            style={{ display: 'none', padding: 8, color: mobileOpen ? 'var(--primary)' : 'var(--text-secondary)', flexShrink: 0 }}>
                             {mobileOpen ? <X size={24} /> : <Menu size={24} />}
                         </button>
                     </div>
@@ -262,6 +265,8 @@ export default function Navbar() {
                     .nav-desktop { display: none !important; }
                     .mobile-menu-btn { display: flex !important; }
                     .hide-mobile { display: none !important; }
+                    .navbar-container { padding: 0 16px !important; }
+                    .nav-user-section { gap: 8px !important; }
                 }
             `}</style>
         </>
