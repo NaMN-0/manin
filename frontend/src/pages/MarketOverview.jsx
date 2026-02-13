@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react';
 import api from '../lib/api';
 import StockCard from '../components/StockCard';
+import MobileStockCard from '../components/MobileStockCard';
+import FeaturePreviewCard from '../components/FeaturePreviewCard';
 import {
     TrendingUp, TrendingDown, Activity, BarChart3, RefreshCw, Clock, Search, AlertTriangle, Check, ExternalLink
 } from 'lucide-react';
@@ -356,6 +358,33 @@ export default function MarketOverview() {
                                 />
                             </div>
                         ))}
+                    </div>
+                </div>
+
+                {/* Coming Soon Banners */}
+                <div style={{ marginTop: 40 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24, paddingLeft: 8 }}>
+                        <div style={{ width: 4, height: 24, background: 'var(--text-muted)', borderRadius: 2 }} />
+                        <h3 style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                            In The Pipeline
+                        </h3>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 24 }}>
+                        <FeaturePreviewCard
+                            title="Paper Trading Dojo"
+                            description="Practice with $100k virtual cash. Test your strategies risk-free before entering the real market."
+                            icon={Check}
+                            color="var(--emerald)"
+                            initialVotes={1240}
+                        />
+                        <FeaturePreviewCard
+                            title="Strategy Backtesting"
+                            description="Run your custom indicators against 10 years of historical data. Validate before you trade."
+                            icon={Activity}
+                            color="var(--primary)"
+                            initialVotes={892}
+                        />
                     </div>
                 </div>
             </div>

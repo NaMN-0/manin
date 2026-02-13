@@ -176,7 +176,7 @@ function StockDetailModal({ ticker, initialData, onClose }) {
                         {chartData.length > 0 && <StockChart data={chartData} />}
 
                         {/* Deep Data Grid */}
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 32, marginBottom: 32 }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 32, marginBottom: 32 }}>
                             {/* Fundamentals */}
                             <div>
                                 <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>

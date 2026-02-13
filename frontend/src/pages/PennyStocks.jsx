@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import NinjaLoader from '../components/NinjaLoader';
 import StockDetailModal from '../components/StockDetailModal';
+import MobileStockCard from '../components/MobileStockCard';
 import { NinjaPennyRocket, NinjaMaster, NinjaDojo } from '../components/NinjaIllustrations';
 
 export default function PennyStocks() {
@@ -178,8 +179,20 @@ export default function PennyStocks() {
                     </div>
                 ) : (
                     <>
-                        {/* Table */}
-                        <div className="glass-card" style={{ padding: 0, overflow: 'hidden', border: '1px solid var(--ninja-border)' }}>
+                        {/* Mobile List View */}
+                        <div className="mobile-only-block" style={{ display: 'none' }}>
+                            {sortedStocks().map((stock, i) => (
+                                <div key={i} style={{ animation: `fadeInUp 0.3s ease forwards`, animationDelay: `${i * 0.03}s`, opacity: 0 }}>
+                                    <MobileStockCard
+                                        stock={stock}
+                                        onClick={() => setSelectedTicker(stock.ticker)}
+                                    />
+                                </div>
+                            ))}
+                        </div>
+
+                        {/* Desktop Table */}
+                        <div className="glass-card desktop-only-block" style={{ padding: 0, overflow: 'hidden', border: '1px solid var(--ninja-border)' }}>
                             <div className="table-scroll-wrapper">
                                 <table className="data-table">
                                     <thead>
@@ -342,6 +355,9 @@ export default function PennyStocks() {
                     .glass-card { grid-template-columns: 1fr !important; }
                     .illustration-float svg { width: 80px !important; height: 80px !important; }
                     h1 { flex-wrap: wrap !important; font-size: 28px !important; }
+                    
+                    .desktop-only-block { display: none !important; }
+                    .mobile-only-block { display: block !important; }
                 }
             `}</style>
         </div>
