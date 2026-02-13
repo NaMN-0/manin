@@ -21,7 +21,8 @@ export default function LifetimeBanner() {
             background: 'linear-gradient(90deg, #0f172a 0%, #1e293b 100%)',
             borderBottom: '1px solid var(--primary)',
             padding: '8px 16px',
-            position: 'relative',
+            position: 'sticky',
+            top: 0,
             zIndex: 1100
         }}>
             <div className="container" style={{
