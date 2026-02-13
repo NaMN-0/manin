@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
 from middleware.auth import require_pro, consume_pro_trial
 from services.news_service import NewsService
 
