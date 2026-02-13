@@ -10,6 +10,7 @@ export function AuthProvider({ children }) {
     const [session, setSession] = useState(null);
     const [loading, setLoading] = useState(true);
     const [isPro, setIsPro] = useState(false);
+    const [hasUsedTrial, setHasUsedTrial] = useState(false);
     const navigate = useNavigate();
     const location = useLocation();
     const didRedirect = useRef(false);
@@ -72,8 +73,10 @@ export function AuthProvider({ children }) {
         try {
             const res = await api.get('/payments/status');
             setIsPro(res.data?.data?.isPro || false);
+            setHasUsedTrial(res.data?.data?.hasUsedTrial || false);
         } catch {
             setIsPro(false);
+            setHasUsedTrial(false);
         }
     }
 
@@ -96,7 +99,7 @@ export function AuthProvider({ children }) {
     }
 
     return (
-        <AuthContext.Provider value={{ user, session, loading, isPro, signInWithGoogle, signOut, checkProStatus }}>
+        <AuthContext.Provider value={{ user, session, loading, isPro, hasUsedTrial, signInWithGoogle, signOut, checkProStatus }}>
             {children}
         </AuthContext.Provider>
     );

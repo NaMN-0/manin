@@ -19,7 +19,7 @@ from services.market_service import get_market_overview
 # Add parent directory to path so we can import existing modules
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from routers import market, penny, payments, auth, meta
+from routers import market, penny, payments, auth, meta, news
 
 app = FastAPI(
     title="Manin API",
@@ -74,6 +74,7 @@ app.include_router(penny.router, prefix="/api/penny", tags=["Penny Stocks"])
 app.include_router(payments.router, prefix="/api/payments", tags=["Payments"])
 app.include_router(auth.router, prefix="/api/auth", tags=["Auth"])
 app.include_router(meta.router, prefix="/api/meta", tags=["Meta"])
+app.include_router(news.router, prefix="/api/news", tags=["News Intelligence"])
 
 
 @app.get("/api/health")

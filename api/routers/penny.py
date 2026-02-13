@@ -3,7 +3,7 @@ Penny stock router — basic (login required) and pro (subscription required) en
 """
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from middleware.auth import get_current_user, require_pro
+from middleware.auth import get_current_user, require_pro, consume_pro_trial
 from services.penny_service import (
     get_basic_penny_list,
     run_full_scan,
@@ -39,6 +39,7 @@ async def full_scan(
     Requires Pro subscription.
     """
     try:
+        await consume_pro_trial(user)
         data = run_full_scan(limit=limit)
         return {"status": "ok", "count": len(data), "data": data}
     except Exception as e:
@@ -56,6 +57,7 @@ async def scan_batch(
     Requires Pro subscription.
     """
     try:
+        await consume_pro_trial(user)
         from services.penny_service import run_batch_scan
         data = run_batch_scan(limit=limit, offset=offset)
         return {"status": "ok", "count": len(data), "data": data}

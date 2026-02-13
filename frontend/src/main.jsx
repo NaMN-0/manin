@@ -5,12 +5,17 @@ import { PostHogProvider } from 'posthog-js/react';
 import './index.css';
 import App from './App.jsx';
 
-// Initialize PostHog
-posthog.init(import.meta.env.VITE_POSTHOG_KEY || 'phc_placeholder', {
-  api_host: import.meta.env.VITE_POSTHOG_HOST || 'https://us.i.posthog.com',
-  person_profiles: 'identified_only', // or 'always' to create profiles for anonymous users as well
-  capture_pageview: false // We will manually track pageviews if using React Router, or let the provider handle it if configured
-});
+// Initialize PostHog only if a valid key is provided
+const POSTHOG_KEY = import.meta.env.VITE_POSTHOG_KEY;
+const POSTHOG_HOST = import.meta.env.VITE_POSTHOG_HOST || 'https://us.i.posthog.com';
+
+if (!import.meta.env.DEV && POSTHOG_KEY && POSTHOG_KEY !== 'phc_placeholder') {
+  posthog.init(POSTHOG_KEY, {
+    api_host: POSTHOG_HOST,
+    person_profiles: 'identified_only',
+    capture_pageview: false
+  });
+}
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>

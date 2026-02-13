@@ -156,6 +156,7 @@ async def verify_payment(payload: PaymentVerify, user: dict = Depends(get_curren
 @router.get("/status")
 async def subscription_status(user: dict = Depends(get_current_user)):
     app_meta = user.get("app_metadata", {})
+    user_id = user.get("id")
     email = user.get("email", "")
     
     is_pro = (
@@ -166,11 +167,29 @@ async def subscription_status(user: dict = Depends(get_current_user)):
     plan = app_meta.get("plan", "free")
     if email == "naman1474@gmail.com":
         plan = "lifetime_founder"
+
+    has_used_trial = False
+    if not is_pro and user_id:
+        # Check DB for trial status
+        try:
+            async with httpx.AsyncClient() as client:
+                resp = await client.get(
+                    f"{SUPABASE_URL}/rest/v1/manin_users?id=eq.{user_id}&select=has_used_trial",
+                    headers={
+                        "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
+                        "apikey": SUPABASE_SERVICE_KEY
+                    }
+                )
+                if resp.status_code == 200 and resp.json():
+                    has_used_trial = resp.json()[0].get("has_used_trial", False)
+        except Exception as e:
+            print(f"Error checking trial status: {e}")
     
     return {
         "status": "ok",
         "data": {
             "isPro": is_pro,
+            "hasUsedTrial": has_used_trial,
             "plan": plan,
             "priceLabel": "Lifetime Founder" if plan == "lifetime_founder" else "Free"
         }

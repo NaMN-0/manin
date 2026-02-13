@@ -69,22 +69,68 @@ async def get_optional_user(
 
 async def require_pro(user: dict = Depends(get_current_user)) -> dict:
     """
-    Dependency: checks if the user has an active pro subscription.
-    Checks app_metadata and user_metadata for subscription status.
+    Dependency: checks if the user has an active pro subscription OR a free trial available.
     """
     user_meta = user.get("user_metadata", {})
     app_meta = user.get("app_metadata", {})
     email = user.get("email", "")
 
+    # 1. Check permanent Pro status
     is_pro = (
         app_meta.get("subscription_status") == "active"
         or user_meta.get("is_pro", False)
         or email == "naman1474@gmail.com"
     )
 
-    if not is_pro:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Pro subscription required. Upgrade to access full intelligence.",
+    if is_pro:
+        return user
+
+    # 2. Check Free Trial status (stored in manin_users table, mirror in token if possible)
+    # Since tokens are cached, we might need a quick DB check or rely on the router to verify.
+    # For the middleware, we'll allow the request through if they aren't explicitly marked 
+    # as having USED their trial. The router will then atomically consume it.
+    
+    # Check trial flag in app_metadata (if synced) or user_metadata
+    has_used_trial = app_meta.get("has_used_trial", False) or user_meta.get("has_used_trial", False)
+    
+    if not has_used_trial:
+        # User is in "Trial Phase"
+        return user
+
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="Free trial expired. Upgrade to Pro for lifetime access.",
+    )
+
+
+async def consume_pro_trial(user: dict):
+    """
+    Utility: Marks the user's free trial as consumed in the database.
+    Does nothing if the user is already Pro.
+    """
+    app_meta = user.get("app_metadata", {})
+    email = user.get("email", "")
+    
+    # 1. If already Pro (paid), no need to consume trial
+    if app_meta.get("subscription_status") == "active" or email == "naman1474@gmail.com":
+        return
+
+    # 2. Update has_used_trial in manin_users table
+    SUPABASE_URL = os.getenv("SUPABASE_URL", "")
+    SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_SERVICE_KEY", os.getenv("SUPABASE_ANON_KEY", ""))
+    
+    user_id = user.get("id")
+    if not user_id:
+        return
+
+    async with httpx.AsyncClient() as client:
+        # Update our tracking table
+        await client.patch(
+            f"{SUPABASE_URL}/rest/v1/manin_users?id=eq.{user_id}",
+            headers={
+                "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
+                "apikey": SUPABASE_SERVICE_KEY,
+                "Content-Type": "application/json"
+            },
+            json={"has_used_trial": True}
         )
-    return user
