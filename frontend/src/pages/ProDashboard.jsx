@@ -301,7 +301,7 @@ export default function ProDashboard() {
                             <div className="results-grid animate-enter">
                                 {/* Batch Analysis Controls */}
                                 <div className="sentiment-sticky-bar" style={{
-                                    position: 'sticky', top: 'calc(var(--banner-height, 0px) + 74px)', zIndex: 100,
+                                    position: 'sticky', top: 'calc(var(--banner-height, 0px) + 84px)', zIndex: 100,
                                     background: 'rgba(5, 5, 16, 0.95)', backdropFilter: 'blur(10px)',
                                     borderRadius: 16, padding: '12px 24px', border: '1px solid var(--primary-dark)',
                                     display: 'flex', justifyContent: 'space-between', alignItems: 'center',
@@ -430,12 +430,15 @@ export default function ProDashboard() {
                     .card-grid { grid-template-columns: 1fr !important; } 
                     .command-deck { padding: 32px 16px !important; }
                     .sentiment-sticky-bar { 
-                        padding: 10px 16px !important; 
+                        padding: 16px !important; 
                         flex-direction: column !important; 
-                        gap: 12px; 
+                        gap: 16px !important; 
                         text-align: center;
+                        margin-bottom: 24px !important;
+                        top: calc(var(--banner-height, 0px) + 74px) !important; /* Slightly closer on tiny screens to save space reached by keyboard etc */
                     }
-                    .sentiment-sticky-bar div { font-size: 12px !important; }
+                    .sentiment-sticky-bar .btn { width: 100% !important; }
+                    .sentiment-sticky-bar div { font-size: 14px !important; line-height: 1.4; }
                 }
             `}</style>
         </div>
