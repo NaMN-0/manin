@@ -114,6 +114,16 @@ def get_basic_penny_list(limit: int = 50) -> list:
                     price = float(latest["Close"])
                     volume = float(latest["Volume"])
                     
+                    # Calculate daily change percentage
+                    change_pct = 0.0
+                    try:
+                        if len(df) > 1:
+                            prev_close = float(df.iloc[-2]["Close"])
+                            if prev_close > 0:
+                                change_pct = ((price - prev_close) / prev_close) * 100
+                    except Exception:
+                        pass
+                    
                     if price < 5.0 and volume > 10000:
                         results.append(
                             {
@@ -122,6 +132,7 @@ def get_basic_penny_list(limit: int = 50) -> list:
                                 "volume": int(volume),
                                 "high": round(float(latest["High"]), 4),
                                 "low": round(float(latest["Low"]), 4),
+                                "changePct": round(change_pct, 2),
                             }
                         )
                 except Exception:
@@ -373,6 +384,8 @@ def _deep_analyze(ticker: str, market_progress: float = 1.0) -> Optional[dict]:
             score += 3
 
         price = float(latest["Close"])
+        prev_close = float(df.iloc[-2]["Close"])
+        change_pct = ((price - prev_close) / prev_close) * 100
         upside = ((predicted_price - price) / price) * 100
 
         # Price history for charts
@@ -385,6 +398,7 @@ def _deep_analyze(ticker: str, market_progress: float = 1.0) -> Optional[dict]:
             "ticker": ticker,
             "price": round(price, 4),
             "predicted": round(predicted_price, 4),
+            "changePct": round(change_pct, 2),
             "upside": round(upside, 1),
             "margin": round(profit_margin * 100, 1),
             "isProfitable": is_profitable,

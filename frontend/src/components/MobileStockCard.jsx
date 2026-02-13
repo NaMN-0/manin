@@ -1,7 +1,7 @@
 import { TrendingUp, TrendingDown, ChevronRight } from 'lucide-react';
 
 export default function MobileStockCard({ stock, onClick, showVolume = true }) {
-    const isUp = (stock.changePct || stock.upside) > 0;
+    const isUp = stock.changePct !== undefined ? stock.changePct >= 0 : (stock.upside >= 0);
     const changeVal = stock.changePct !== undefined ? stock.changePct : stock.upside;
     const price = stock.price ? stock.price.toFixed(stock.price < 1 ? 4 : 2) : '0.00';
 

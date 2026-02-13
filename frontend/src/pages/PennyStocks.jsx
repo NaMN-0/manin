@@ -213,6 +213,9 @@ export default function PennyStocks() {
                                             </th>
                                             <th className="hide-mobile">Day High</th>
                                             <th className="hide-mobile">Day Low</th>
+                                            <th onClick={() => toggleSort('changePct')} className="sortable-th">
+                                                Today <ArrowUpDown size={12} />
+                                            </th>
                                             <th className="hide-mobile">Movement</th>
                                         </tr>
                                     </thead>
@@ -259,6 +262,13 @@ export default function PennyStocks() {
                                                     </td>
                                                     <td className="hide-mobile" style={{ fontFamily: 'var(--font-mono)', color: 'var(--crimson)' }}>
                                                         ${stock.low?.toFixed(4)}
+                                                    </td>
+                                                    <td style={{
+                                                        fontFamily: 'var(--font-mono)',
+                                                        fontWeight: 700,
+                                                        color: stock.changePct >= 0 ? 'var(--emerald)' : 'var(--crimson)'
+                                                    }}>
+                                                        {stock.changePct >= 0 ? '+' : ''}{stock.changePct}%
                                                     </td>
                                                     <td className="hide-mobile">
                                                         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>

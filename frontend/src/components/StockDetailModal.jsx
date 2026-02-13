@@ -160,8 +160,8 @@ function StockDetailModal({ ticker, initialData, onClose }) {
                             <MetricCard
                                 label="AI Target"
                                 value={`$${data.predicted}`}
-                                subValue={`${data.upside > 0 ? '+' : ''}${data.upside}%`}
-                                isUp={isUp}
+                                subValue={`${(data.changePct ?? data.upside) > 0 ? '+' : ''}${data.changePct ?? data.upside}%`}
+                                isUp={(data.changePct ?? data.upside) > 0}
                                 highlight={true}
                             />
                             <MetricCard
