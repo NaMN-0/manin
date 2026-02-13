@@ -300,8 +300,8 @@ export default function ProDashboard() {
                         {activeTab === 'scan' && showResults && (
                             <div className="results-grid animate-enter">
                                 {/* Batch Analysis Controls */}
-                                <div style={{
-                                    position: 'sticky', top: 20, zIndex: 100,
+                                <div className="sentiment-sticky-bar" style={{
+                                    position: 'sticky', top: 'calc(var(--banner-height, 0px) + 74px)', zIndex: 100,
                                     background: 'rgba(5, 5, 16, 0.95)', backdropFilter: 'blur(10px)',
                                     borderRadius: 16, padding: '12px 24px', border: '1px solid var(--primary-dark)',
                                     display: 'flex', justifyContent: 'space-between', alignItems: 'center',
@@ -426,7 +426,17 @@ export default function ProDashboard() {
                 @keyframes progress { 0% { width: 0%; } 50% { width: 85%; } 70% { width: 90%; } 100% { width: 95%; } }
                 @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
                 @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
-                @media (max-width: 768px) { .card-grid { grid-template-columns: 1fr !important; } .command-deck { padding: 32px 16px !important; } }
+                @media (max-width: 768px) { 
+                    .card-grid { grid-template-columns: 1fr !important; } 
+                    .command-deck { padding: 32px 16px !important; }
+                    .sentiment-sticky-bar { 
+                        padding: 10px 16px !important; 
+                        flex-direction: column !important; 
+                        gap: 12px; 
+                        text-align: center;
+                    }
+                    .sentiment-sticky-bar div { font-size: 12px !important; }
+                }
             `}</style>
         </div>
     );
