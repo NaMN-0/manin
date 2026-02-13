@@ -13,8 +13,8 @@ import Onboarding from './pages/Onboarding';
 import Profile from './pages/Profile';
 import LifetimeBanner from './components/LifetimeBanner';
 import ErrorDisplay from './components/ErrorDisplay';
-import ScrollToTop from './components/ScrollToTop'; // Import ScrollToTop
-
+import ScrollToTop from './components/ScrollToTop';
+import { TermsOfService, PrivacyPolicy, RefundPolicy, RiskDisclaimer } from './pages/LegalPages';
 import Footer from './components/Footer';
 
 const MainLayout = () => {
@@ -66,6 +66,10 @@ function App() {
                 <Profile />
               </ProtectedRoute>
             } />
+            <Route path="/terms" element={<TermsOfService />} />
+            <Route path="/privacy" element={<PrivacyPolicy />} />
+            <Route path="/refunds" element={<RefundPolicy />} />
+            <Route path="/disclaimer" element={<RiskDisclaimer />} />
           </Route>
         </Routes>
       </AuthProvider>

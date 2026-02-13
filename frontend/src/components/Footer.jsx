@@ -43,6 +43,7 @@ export default function Footer() {
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                             <FooterLink to="/terms">Terms of Service</FooterLink>
                             <FooterLink to="/privacy">Privacy Policy</FooterLink>
+                            <FooterLink to="/refunds">Refund Policy</FooterLink>
                             <FooterLink to="/disclaimer">Risk Disclaimer</FooterLink>
                         </div>
                     </div>

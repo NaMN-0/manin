@@ -175,8 +175,10 @@ export default function ProGate({ children }) {
                         )}
                     </div>
 
-                    <p style={{ fontSize: 12, color: 'var(--text-muted)', textAlign: 'center', marginTop: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-                        <Lock size={12} /> Secure 256-bit encryption
+                    <p style={{ fontSize: 12, color: 'var(--text-muted)', textAlign: 'center', marginTop: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, flexWrap: 'wrap' }}>
+                        <Lock size={12} /> Secure 256-bit encryption •
+                        <Link to="/privacy" style={{ color: 'inherit' }}>Privacy</Link> •
+                        <Link to="/terms" style={{ color: 'inherit' }}>Terms</Link>
                     </p>
                 </div>
             </div>
