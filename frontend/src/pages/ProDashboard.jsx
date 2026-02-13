@@ -21,10 +21,13 @@ export default function ProDashboard() {
     const [selectedStock, setSelectedStock] = useState(null);
     const [logs, setLogs] = useState([]);
     const [showResults, setShowResults] = useState(false);
-    const [activeTab, setActiveTab] = useState('scan'); // 'scan' or 'intelligence'
+    const [activeTab, setActiveTab] = useState('scan'); // 'scan', 'intelligence', or 'moonshot'
     const [newsResults, setNewsResults] = useState([]);
     const [newsLoading, setNewsLoading] = useState(false);
+    const [moonshotResults, setMoonshotResults] = useState([]);
+    const [moonshotLoading, setMoonshotLoading] = useState(false);
     const [trialExpired, setTrialExpired] = useState(false);
+
     const { user, checkProStatus } = useAuth();
     const posthog = usePostHog();
 
@@ -121,7 +124,29 @@ export default function ProDashboard() {
         }
     }
 
+    async function runMoonshotScan() {
+        if (moonshotLoading) return;
+        setMoonshotLoading(true);
+        setActiveTab('moonshot');
+        setLogs(prev => [...prev, ">> INITIATING MOONSHOT DEEP SCAN [10X ALPHA PROTOCOL]"]);
+        try {
+            const res = await api.get('/penny/moonshots');
+            if (res.data?.status === 'ok') {
+                setMoonshotResults(res.data.data);
+                setLogs(prev => [...prev, ">> 5 TARGETS IDENTIFIED WITH EXPLOSIVE POTENTIAL"]);
+            }
+        } catch (err) {
+            console.error(err);
+            if (err.response?.status === 403) setTrialExpired(true);
+            setLogs(prev => [...prev, ">> ERROR: ALPHA STREAM COMPROMISED"]);
+        } finally {
+            setMoonshotLoading(false);
+            checkProStatus?.();
+        }
+    }
+
     const profitable = results.filter(r => r.isProfitable);
+
     const speculative = results.filter(r => !r.isProfitable);
 
     const renderSwarm = () => {
@@ -200,6 +225,36 @@ export default function ProDashboard() {
                             <div key={i} style={{ opacity: (i + 1) / 6 }}>{log}</div>
                         ))}
                     </div>
+                </div>
+
+                {/* Tab Switcher */}
+                <div style={{ display: 'flex', gap: 12, marginBottom: 30, flexWrap: 'wrap' }}>
+                    {[
+                        { id: 'scan', label: 'Market Scanner', icon: Target },
+                        { id: 'intelligence', label: 'Sentiment AI', icon: BrainCircuit },
+                        { id: 'moonshot', label: 'Moonshot Scout', icon: Zap, highlight: true },
+                    ].map(tab => (
+                        <button
+                            key={tab.id}
+                            onClick={() => {
+                                setActiveTab(tab.id);
+                                if (tab.id === 'moonshot' && moonshotResults.length === 0) runMoonshotScan();
+                            }}
+                            className="nav-tab-btn"
+                            style={{
+                                display: 'flex', alignItems: 'center', gap: 8, padding: '10px 20px',
+                                borderRadius: 12, border: activeTab === tab.id ? '1px solid var(--primary)' : '1px solid var(--ninja-border)',
+                                background: activeTab === tab.id ? 'rgba(14, 165, 233, 0.15)' : 'rgba(15, 23, 42, 0.5)',
+                                color: activeTab === tab.id ? 'white' : 'var(--text-secondary)',
+                                cursor: 'pointer', transition: 'all 0.2s', fontWeight: 600,
+                                boxShadow: (activeTab === tab.id && tab.highlight) ? '0 0 15px rgba(245, 158, 11, 0.3)' : 'none',
+                                borderColor: (activeTab === tab.id && tab.highlight) ? 'var(--warning)' : undefined
+                            }}
+                        >
+                            <tab.icon size={16} color={activeTab === tab.id ? (tab.highlight ? 'var(--warning)' : 'var(--primary)') : undefined} />
+                            {tab.label}
+                        </button>
+                    ))}
                 </div>
 
                 {/* Trial Expired / Pro Upgrade Wall */}
@@ -368,10 +423,103 @@ export default function ProDashboard() {
                                 </div>
                             </div>
                         )}
+                        {/* 5. Moonshot Phase */}
+                        {activeTab === 'moonshot' && (
+                            <div className="moonshot-results animate-enter">
+                                {moonshotLoading ? (
+                                    <div style={{ textAlign: 'center', padding: '100px 0' }}>
+                                        <div style={{ width: 120, height: 120, margin: '0 auto 24px', position: 'relative' }}>
+                                            <NinjaTarget width={120} height={120} style={{ animation: 'spin 4s linear infinite' }} />
+                                            <div style={{ position: 'absolute', inset: 0, border: '2px dashed var(--warning)', borderRadius: '50%', animation: 'ping 2s cubic-bezier(0, 0, 0.2, 1) infinite' }} />
+                                        </div>
+                                        <h3 style={{ fontSize: 24, fontWeight: 900, color: 'var(--warning)', letterSpacing: '4px', textTransform: 'uppercase' }}>Target Locking</h3>
+                                        <p style={{ color: 'var(--text-muted)', marginTop: 8 }}>Analyzing 10x alpha signals and fundamental thrust...</p>
+                                    </div>
+                                ) : (
+                                    <>
+                                        <div style={{
+                                            background: 'linear-gradient(90deg, rgba(245, 158, 11, 0.1) 0%, transparent 100%)',
+                                            borderLeft: '4px solid var(--warning)',
+                                            padding: '20px 24px', borderRadius: '0 16px 16px 0', marginBottom: 40
+                                        }}>
+                                            <h2 style={{ fontSize: 24, fontWeight: 900, color: 'white', marginBottom: 4 }}>Top 5 Alpha Moonshots</h2>
+                                            <p style={{ color: 'var(--text-secondary)' }}>Highest confidence targets for exponential growth based on multi-level intelligence.</p>
+                                        </div>
+
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+                                            {moonshotResults.map((stock, i) => (
+                                                <div key={i} className="glass-card moonshot-card" style={{
+                                                    padding: 0, overflow: 'hidden', border: '1px solid rgba(245, 158, 11, 0.2)',
+                                                    background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.8) 0%, rgba(5, 5, 16, 0.95) 100%)'
+                                                }}>
+                                                    <div style={{ display: 'flex', flexWrap: 'wrap' }}>
+                                                        {/* Visual Rank Section */}
+                                                        <div style={{
+                                                            width: 80, background: 'rgba(245, 158, 11, 0.05)',
+                                                            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                                                            borderRight: '1px solid rgba(245, 158, 11, 0.1)'
+                                                        }}>
+                                                            <div style={{ fontSize: 48, fontWeight: 900, color: 'rgba(245, 158, 11, 0.2)' }}>#{i + 1}</div>
+                                                            <div style={{ fontSize: 10, fontWeight: 800, color: 'var(--warning)', letterSpacing: '2px' }}>RANK</div>
+                                                        </div>
+
+                                                        {/* Main Content */}
+                                                        <div style={{ flex: 1, padding: 24 }}>
+                                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
+                                                                <div>
+                                                                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 4 }}>
+                                                                        <span style={{ fontSize: 32, fontWeight: 900, letterSpacing: '-1px' }}>{stock.ticker}</span>
+                                                                        <span style={{ padding: '4px 10px', borderRadius: 6, background: 'rgba(245, 158, 11, 0.15)', color: 'var(--warning)', fontSize: 12, fontWeight: 800 }}>ALPHA SCORE: {stock.moonScore}</span>
+                                                                    </div>
+                                                                    <div style={{ fontSize: 14, color: 'var(--text-secondary)' }}>{stock.industry} • {stock.sector}</div>
+                                                                </div>
+                                                                <div style={{ textAlign: 'right' }}>
+                                                                    <div style={{ fontSize: 24, fontWeight: 800 }}>${stock.price}</div>
+                                                                    <div style={{ color: stock.upside > 0 ? 'var(--emerald)' : 'var(--crimson)', fontWeight: 700 }}>
+                                                                        {stock.upside > 0 ? '+' : ''}{stock.upside}% PROJ. UPSIDE
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+
+                                                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16, marginBottom: 24 }}>
+                                                                <div style={{ padding: 16, borderRadius: 12, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)' }}>
+                                                                    <div style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 8 }}>AI Intelligence Outlook</div>
+                                                                    <div style={{ fontSize: 14, lineHeight: '1.5', color: 'var(--text-primary)' }}>{stock.outlook}</div>
+                                                                </div>
+                                                                <div style={{ padding: 16, borderRadius: 12, background: 'rgba(245, 158, 11, 0.03)', border: '1px solid rgba(245, 158, 11, 0.1)' }}>
+                                                                    <div style={{ fontSize: 11, color: 'var(--warning)', textTransform: 'uppercase', marginBottom: 8 }}>10x Potential Reasoning</div>
+                                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                                                                        {stock.moonReasoning?.map((r, ri) => (
+                                                                            <div key={ri} style={{ fontSize: 13, display: 'flex', alignItems: 'center', gap: 8 }}>
+                                                                                <div style={{ width: 4, height: 4, borderRadius: '50%', background: 'var(--warning)' }} />
+                                                                                {r}
+                                                                            </div>
+                                                                        ))}
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+
+                                                            <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                                                                <button onClick={() => setSelectedStock(stock)} className="btn btn-secondary" style={{ padding: '8px 20px', fontSize: 13 }}>View Technicals</button>
+                                                                <button onClick={() => {
+                                                                    setSelectedTickers(new Set([stock.ticker]));
+                                                                    runBatchAnalysis();
+                                                                }} className="btn btn-primary" style={{ padding: '8px 20px', fontSize: 13 }}>Deep News Scan</button>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </>
+                                )}
+                            </div>
+                        )}
                     </>
                 )}
 
                 {/* News Intelligence Modal */}
+
                 {showNewsModal && (
                     <div style={{
                         position: 'fixed', inset: 0, zIndex: 1000,

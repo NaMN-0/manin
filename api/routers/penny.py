@@ -9,8 +9,25 @@ from services.penny_service import (
     run_full_scan,
     analyze_single_penny,
 )
+from services.moonshot_service import MoonshotService
 
 router = APIRouter()
+
+
+@router.get("/moonshots")
+async def get_moonshots(
+    user: dict = Depends(require_pro),
+):
+    """
+    Finds top 5 moonshot stocks (10x potential).
+    Requires Pro subscription.
+    """
+    try:
+        await consume_pro_trial(user)
+        data = MoonshotService.get_top_moonshots()
+        return {"status": "ok", "count": len(data), "data": data}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.get("/basic")
