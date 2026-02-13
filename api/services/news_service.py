@@ -36,14 +36,17 @@ class NewsService:
                 summaries = []
                 
                 for item in news:
-                    title = item.get('title', '').lower()
+                    # yfinance structure changed: title is often in item['content']['title']
+                    content = item.get('content', {})
+                    title = content.get('title') or item.get('title', '')
+                    title = title.lower()
                     
                     # Basic sentiment count
                     bull_hits = sum(1 for w in BULLISH_WORDS if w in title)
                     bear_hits = sum(1 for w in BEARISH_WORDS if w in title)
                     
                     sentiment_score += (bull_hits - bear_hits)
-                    summaries.append(item.get('title'))
+                    summaries.append(content.get('title') or item.get('title', ''))
 
                 if not news:
                     # Even if no news, we return the ticker with neutral status so UI knows it was processed
