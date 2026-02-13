@@ -48,4 +48,4 @@ services:
       - key: VITE_RAZORPAY_KEY_ID
         sync: false
       - key: VITE_API_URL
-        value: https://YOUR-BACKEND-URL.onrender.com/api
+        value: https://manin-api.onrender.com/api
