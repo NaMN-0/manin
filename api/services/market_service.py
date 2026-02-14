@@ -28,6 +28,18 @@ INDICES = {
 
 
 from services.cache_service import CacheService
+import math
+
+def check_nan(val):
+    """Converts NaN/Inf to None for JSON safety."""
+    if val is None: return None
+    try:
+        f = float(val)
+        if math.isnan(f) or math.isinf(f):
+            return None
+        return f
+    except:
+        return None
 
 # Removed global in-memory cache variables as we used CacheService now
 
@@ -56,9 +68,9 @@ def get_market_overview() -> dict:
                 {
                     "name": name,
                     "symbol": symbol,
-                    "price": round(current, 2),
-                    "change": round(change, 2),
-                    "changePct": round(change_pct, 2),
+                    "price": check_nan(round(current, 2)),
+                    "change": check_nan(round(change, 2)),
+                    "changePct": check_nan(round(change_pct, 2)),
                 }
             )
         except Exception:
@@ -111,8 +123,8 @@ def _get_top_movers() -> list:
                 movers.append(
                     {
                         "ticker": ticker,
-                        "price": round(current, 2),
-                        "changePct": round(change_pct, 2),
+                        "price": check_nan(round(current, 2)),
+                        "changePct": check_nan(round(change_pct, 2)),
                     }
                 )
             except Exception:

@@ -69,6 +69,13 @@ from services.cache_service import CacheService
 
 # ─── Universe ─────────────────────────────────────────────────────────────────
 
+def sanitize_ticker(ticker: str) -> str:
+    """Sanitizes ticker symbols for yfinance."""
+    ticker = ticker.strip().upper()
+    # Replace common preferred/warrant chars
+    ticker = ticker.replace("^", "-P").replace("/", "-") 
+    return ticker
+
 def get_universe() -> list:
     """Fetches the penny stock universe. Uses Supabase Cache (24 hours)."""
     # Try cache (24h)
@@ -80,8 +87,19 @@ def get_universe() -> list:
     if penny_loader:
         universe = penny_loader.get_penny_stocks()
         if universe:
-            CacheService.set("penny_universe", universe)
-            return universe
+            # Sanitize tickers for yfinance (replace ^ and / with -)
+            # e.g. "AHT^D" -> "AHT-PD", "AKO/B" -> "AKO-B"
+            sanitized = []
+            for t in universe:
+                t = t.strip().upper()
+                if "^" in t:
+                    t = t.replace("^", "-P") # yfinance preferred syntax often -P or -
+                if "/" in t:
+                    t = t.replace("/", "-")
+                sanitized.append(t)
+            
+            CacheService.set("penny_universe", sanitized)
+            return sanitized
     
     return []
 
