@@ -10,6 +10,9 @@ from dotenv import load_dotenv
 # Load environment variables early
 load_dotenv()
 
+from core.logging_config import setup_logging
+setup_logging()
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -43,8 +46,8 @@ def update_market_cache():
 def start_scheduler():
     # Run after 60s to allow health checks to pass first
     scheduler.add_job(update_market_cache, 'date', run_date=datetime.now() + timedelta(seconds=60))
-    # Then every 15 mins
-    scheduler.add_job(update_market_cache, 'interval', minutes=15)
+    # Then every 15 mins. max_instances=1 ensures no overlap if prev job is slow (Render limit)
+    scheduler.add_job(update_market_cache, 'interval', minutes=15, max_instances=1, coalesce=True)
     scheduler.start()
     print("Background scheduler started.")
 

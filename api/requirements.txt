@@ -8,6 +8,7 @@ pydantic==2.9.0
 # Quant dependencies (shared with existing code)
 yfinance>=0.2.40
 pandas>=2.2.2
+tenacity>=8.2.3
 pandas-ta-classic
 apscheduler
 supabase>=0.3.59

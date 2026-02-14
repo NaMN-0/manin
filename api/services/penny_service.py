@@ -4,13 +4,42 @@ Penny stock analysis service — wraps existing penny_loader.py and penny_server
 
 import warnings
 import traceback
-from typing import Optional, List
-
-import warnings
-import traceback
+import logging
+import gc
 from typing import Optional, List
 import pytz
 from datetime import datetime
+import requests
+from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
+
+# New Signals Module
+from services.signals import check_structure_liquidity, check_wyckoff_spring
+
+warnings.filterwarnings("ignore")
+
+logger = logging.getLogger(__name__)
+
+# ─── Robust Helpers ──────────────────────────────────────────────────────────
+
+@retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10),
+       retry=retry_if_exception_type((requests.exceptions.RequestException, ImportError, ConnectionError)))
+def _safe_download(tickers, period="5d", timeout=15):
+    """
+    Robust download wrapper with retries.
+    """
+    import yfinance as yf
+    try:
+        data = yf.download(tickers, period=period, group_by="ticker", threads=False, progress=False, timeout=timeout)
+        if data is None or data.empty:
+             # Force retry on empty data if it's expected to exist
+             # But yfinance might return empty if market is closed or weird error. 
+             # We raise to trigger retry only if it looks like a transient network issue 
+             # (hard to distinguish, but let's assume empty means bad fetch here)
+             raise requests.exceptions.RequestException("Empty data returned from yfinance")
+        return data
+    except Exception as e:
+        logger.warning(f"Download failed (attempting retry): {e}")
+        raise
 
 warnings.filterwarnings("ignore")
 
@@ -92,9 +121,12 @@ def get_basic_penny_list(limit: int = 50) -> list:
 
         batch = tickers[i : i + chunk_size]
         try:
-            import yfinance as yf
-            # Reduced timeout for faster fail-fast
-            data = yf.download(batch, period="5d", group_by="ticker", threads=False, progress=False, timeout=10)
+            # Robust download with retries
+            try:
+                data = _safe_download(batch, period="5d", timeout=10)
+            except Exception as e:
+                logger.error(f"Failed to download batch after retries: {e}")
+                continue
             
             if data is None or data.empty:
                 continue
@@ -171,15 +203,12 @@ def run_full_scan(limit: int = 100) -> list:
     for i in range(0, len(universe), chunk_size):
         batch = universe[i : i + chunk_size]
         try:
+            # Robust download logic for full scan
             try:
-                import yfinance as yf
-                data = yf.download(batch, period="5d", group_by="ticker", threads=False, progress=False, timeout=10)
-            except (requests.exceptions.Timeout, Exception):
-                try:
-                    import yfinance as yf
-                    data = yf.download(batch, period="5d", group_by="ticker", threads=False, progress=False, timeout=15)
-                except Exception:
-                    continue
+                data = _safe_download(batch, period="5d", timeout=15)
+            except Exception as e:
+                logger.error(f"Failed to download batch in full scan: {e}")
+                continue
 
             if data is None or data.empty:
                 continue
@@ -211,16 +240,27 @@ def run_full_scan(limit: int = 100) -> list:
     # Limit deep analysis to top 300 to prevent timeout
     targets = [x["ticker"] for x in filtered[:300]] 
 
-    # Phase 2: Deep analysis
+    # Phase 2: Deep analysis (Optimized for Render Free Tier: Batch + GC)
     market_prog = _market_progress()
     results = []
 
-    for ticker in targets:
-        res = _deep_analyze(ticker, market_prog)
-        if res:
-            results.append(res)
-            if len(results) >= limit:
-                break
+    # Process targets in small batches to clean memory
+    analysis_chunk_size = 50 
+    for i in range(0, len(targets), analysis_chunk_size):
+        chunk_targets = targets[i : i + analysis_chunk_size]
+        
+        for ticker in chunk_targets:
+            res = _deep_analyze(ticker, market_prog)
+            if res:
+                results.append(res)
+                if len(results) >= limit:
+                    break
+        
+        # Explicit GC after each chunk to free up DataFrame memory
+        gc.collect()
+        
+        if len(results) >= limit:
+            break
 
     results.sort(key=lambda x: (1 if x["isProfitable"] else 0, x["upside"]), reverse=True)
     
@@ -408,6 +448,22 @@ def _deep_analyze(ticker: str, market_progress: float = 1.0) -> Optional[dict]:
         except KeyError:
             pass
 
+        # ─── Alpha Suite Intelligence ─────────────────────────────────────────
+        
+        # 1. Structure Liquidity (Sweep & Reclaim)
+        liq_setup = check_structure_liquidity(df)
+        if liq_setup:
+            for s in liq_setup['signals']:
+                signals.append(s)
+            score += liq_setup['score']
+
+        # 2. Wyckoff Spring
+        wyckoff_setup = check_wyckoff_spring(df)
+        if wyckoff_setup:
+            for s in wyckoff_setup['signals']:
+                signals.append(s)
+            score += wyckoff_setup['score']
+            
         is_profitable = profit_margin > 0
         if is_profitable:
             signals.append(f"Profitable ({profit_margin * 100:.1f}%)")
@@ -448,6 +504,11 @@ def _deep_analyze(ticker: str, market_progress: float = 1.0) -> Optional[dict]:
     except Exception:
         traceback.print_exc()
         return None
+    finally:
+        # Help GC by del ref
+        try:
+             del df, stock
+        except: pass
 
 
 def analyze_single_penny(ticker: str) -> Optional[dict]:
