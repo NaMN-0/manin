@@ -79,7 +79,7 @@ def sanitize_ticker(ticker: str) -> str:
 def get_universe() -> list:
     """Fetches the penny stock universe. Uses Supabase Cache (24 hours)."""
     # Try cache (24h)
-    cached = CacheService.get("penny_universe", max_age_minutes=1440)
+    cached = CacheService.get("penny_universe_v2", max_age_minutes=1440)
     if cached:
         return cached
 
@@ -98,7 +98,7 @@ def get_universe() -> list:
                     t = t.replace("/", "-")
                 sanitized.append(t)
             
-            CacheService.set("penny_universe", sanitized)
+            CacheService.set("penny_universe_v2", sanitized)
             return sanitized
     
     return []
