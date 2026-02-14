@@ -154,7 +154,13 @@ def get_basic_penny_list(limit: int = 50) -> list:
 # ─── Full deep scan (pro only) ───────────────────────────────────────────────
 
 def run_full_scan(limit: int = 100) -> list:
-    """Full AI scan with predictions, signals, and scoring. Pro only."""
+    """Full AI scan with predictions, signals, and scoring. Pro only. Cached for 1 hour."""
+    # 1. Try Cache
+    cache_key = f"full_scan_{limit}"
+    cached = CacheService.get(cache_key, max_age_minutes=60)
+    if cached:
+        return cached
+
     universe = get_universe()
     if not universe:
         return []
@@ -167,11 +173,11 @@ def run_full_scan(limit: int = 100) -> list:
         try:
             try:
                 import yfinance as yf
-                data = yf.download(batch, period="5d", group_by="ticker", threads=False, progress=False, timeout=20)
+                data = yf.download(batch, period="5d", group_by="ticker", threads=False, progress=False, timeout=10)
             except (requests.exceptions.Timeout, Exception):
                 try:
                     import yfinance as yf
-                    data = yf.download(batch, period="5d", group_by="ticker", threads=False, progress=False, timeout=30)
+                    data = yf.download(batch, period="5d", group_by="ticker", threads=False, progress=False, timeout=15)
                 except Exception:
                     continue
 
@@ -202,7 +208,8 @@ def run_full_scan(limit: int = 100) -> list:
             continue
 
     filtered.sort(key=lambda x: x["vol"], reverse=True)
-    targets = [x["ticker"] for x in filtered[:limit]]
+    # Limit deep analysis to top 300 to prevent timeout
+    targets = [x["ticker"] for x in filtered[:300]] 
 
     # Phase 2: Deep analysis
     market_prog = _market_progress()
@@ -212,13 +219,26 @@ def run_full_scan(limit: int = 100) -> list:
         res = _deep_analyze(ticker, market_prog)
         if res:
             results.append(res)
+            if len(results) >= limit:
+                break
 
     results.sort(key=lambda x: (1 if x["isProfitable"] else 0, x["upside"]), reverse=True)
+    
+    # Save to Cache
+    if results:
+         CacheService.set(cache_key, results)
+         
     return results
 
 
 def run_batch_scan(limit: int = 10, offset: int = 0) -> list:
     """Runs deep analysis on a small batch of tickers. Used for progressive loading."""
+    # 1. Try Cache
+    cache_key = f"batch_scan_{limit}_{offset}"
+    cached = CacheService.get(cache_key, max_age_minutes=10)
+    if cached:
+        return cached
+
     universe = get_universe()
     if not universe:
         return []
@@ -236,7 +256,7 @@ def run_batch_scan(limit: int = 10, offset: int = 0) -> list:
         # We can reuse the logic from run_full_scan but scoped to this batch
         try:
              import yfinance as yf
-             data = yf.download(batch_tickers, period="5d", group_by="ticker", threads=False, progress=False, timeout=20)
+             data = yf.download(batch_tickers, period="5d", group_by="ticker", threads=False, progress=False, timeout=10)
         except Exception:
              return []
 
@@ -277,6 +297,10 @@ def run_batch_scan(limit: int = 10, offset: int = 0) -> list:
         res = _deep_analyze(ticker, market_prog)
         if res:
             results.append(res)
+
+    # Save to Cache
+    if results:
+        CacheService.set(cache_key, results)
 
     return results
 
