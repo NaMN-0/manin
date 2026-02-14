@@ -3,6 +3,7 @@ Penny stock router — basic (login required) and pro (subscription required) en
 """
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.concurrency import run_in_threadpool
 from middleware.auth import get_current_user, require_pro, consume_pro_trial
 from services.penny_service import (
     get_basic_penny_list,
@@ -24,7 +25,8 @@ async def get_moonshots(
     """
     try:
         await consume_pro_trial(user)
-        data = MoonshotService.get_top_moonshots()
+        # MoonshotService.get_top_moonshots() is blocking
+        data = await run_in_threadpool(MoonshotService.get_top_moonshots)
         return {"status": "ok", "count": len(data), "data": data}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -40,7 +42,8 @@ async def basic_penny_list(
     Requires login.
     """
     try:
-        data = get_basic_penny_list(limit=limit)
+        # get_basic_penny_list is blocking
+        data = await run_in_threadpool(get_basic_penny_list, limit=limit)
         return {"status": "ok", "count": len(data), "data": data}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -57,7 +60,8 @@ async def full_scan(
     """
     try:
         await consume_pro_trial(user)
-        data = run_full_scan(limit=limit)
+        # run_full_scan is blocking
+        data = await run_in_threadpool(run_full_scan, limit=limit)
         return {"status": "ok", "count": len(data), "data": data}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -76,7 +80,8 @@ async def scan_batch(
     try:
         await consume_pro_trial(user)
         from services.penny_service import run_batch_scan
-        data = run_batch_scan(limit=limit, offset=offset)
+        # run_batch_scan is blocking
+        data = await run_in_threadpool(run_batch_scan, limit=limit, offset=offset)
         return {"status": "ok", "count": len(data), "data": data}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -91,7 +96,8 @@ async def analyze_penny(
     Deep analysis on a single penny stock.
     Requires login.
     """
-    result = analyze_single_penny(ticker.upper())
+    # analyze_single_penny is blocking
+    result = await run_in_threadpool(analyze_single_penny, ticker.upper())
     if result is None:
         raise HTTPException(status_code=404, detail=f"No data for {ticker}")
     return {"status": "ok", "data": result}

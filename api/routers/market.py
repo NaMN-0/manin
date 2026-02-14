@@ -11,7 +11,7 @@ router = APIRouter()
 
 
 @router.get("/overview")
-async def market_overview():
+def market_overview():
     """
     Returns major index data, top movers, and market status.
     Free — no auth required.
@@ -24,7 +24,7 @@ async def market_overview():
 
 
 @router.get("/analyze/{ticker}")
-async def analyze(ticker: str):
+def analyze(ticker: str):
     """
     Deep technical analysis on a single ticker.
     Free — no auth required.
