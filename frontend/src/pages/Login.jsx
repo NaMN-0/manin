@@ -15,13 +15,11 @@ export default function Login() {
     }
 
     if (user) {
+        // Always redirect to welcome as requested
+        // intent/founder logic can be handled later if needed, but "default land to welcome" is primary.
         const intent = localStorage.getItem('user_intent');
-        // If they already have a session, respect the intent immediately
         if (intent === 'founder') {
-            // Don't clear it here, let the destination page logic handle it or just redirect
-            // Actually better to clear it if we consume it.
             localStorage.removeItem('user_intent');
-            return <Navigate to="/pro" replace />;
         }
         return <Navigate to="/welcome" replace />;
     }

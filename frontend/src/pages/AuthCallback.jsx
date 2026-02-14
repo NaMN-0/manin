@@ -51,9 +51,15 @@ export default function AuthCallback() {
                 localStorage.removeItem('user_intent'); // Clear it
 
                 if (intent === 'founder') {
-                    navigate('/pro', { replace: true });
+                    // navigate('/pro', { replace: true });
+                    // User requested to land on Welcome screen by default, even if intent was founder?
+                    // Or maybe for founder specifically we keep /pro but for general users we use /welcome?
+                    // "Also by default land to welcome screen after login" implies general case.
+                    // Let's safe bet: always go to welcome for now, or keep intent logic but default to welcome.
+                    // Actually, let's redirect to Welcome for EVERYONE as requested.
+                    navigate('/welcome', { replace: true });
                 } else {
-                    navigate('/penny', { replace: true });
+                    navigate('/welcome', { replace: true });
                 }
             } else {
                 setError('Failed to establish session');
