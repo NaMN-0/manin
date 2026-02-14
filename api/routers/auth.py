@@ -31,21 +31,37 @@ async def on_user_login(user: dict = Depends(get_current_user)):
         }
 
         try:
-            # 1. Check/Insert User
+            # 1. Check/Insert User (Lazy Creation)
+            # We catch specific metadata from the user JWT to populate the profile
+            user_meta = user.get("user_metadata", {})
+            full_name = user_meta.get("full_name") or user_meta.get("name")
+            avatar_url = user_meta.get("avatar_url") or user_meta.get("picture")
+
             res = await client.get(f"{SUPABASE_URL}/rest/v1/manin_users?id=eq.{user_id}&select=*", headers=headers)
             existing_user = res.json()
             
             if not existing_user:
+                # Create the user profile since trigger is disabled
+                print(f"Creating missing profile for {email}")
                 await client.post(
                     f"{SUPABASE_URL}/rest/v1/manin_users",
                     headers=headers,
                     json={
                         "id": user_id,
                         "email": email,
+                        "full_name": full_name,
+                        "avatar_url": avatar_url,
                         "created_at": "now()",
-                        "is_pro": False
+                        "updated_at": "now()",
+                        "is_pro": False,
+                        "plan": "free",
+                        "combat_style": "ronin"
                     }
                 )
+            else:
+                # Optional: Update existing profile if fields are missing? 
+                # For now, let's keep it simple. Only insert if missing.
+                pass
             
             # 2. Get User Count (Total)
             count_res = await client.get(f"{SUPABASE_URL}/rest/v1/manin_users?select=count", headers={**headers, "Range": "0-0"})
