@@ -10,15 +10,17 @@ const SEQUENCE = [
     { text: "Precision Strike Ready.", Component: NinjaSlicing }
 ];
 
-export default function SmartLoader() {
+export default function SmartLoader({ sequence }) {
     const [step, setStep] = useState(0);
+
+    const activeSequence = sequence || SEQUENCE;
 
     useEffect(() => {
         // Progress through sequence, holding longer on earlier steps
         const times = [2000, 2500, 2000, 1500];
 
         const timer = setTimeout(() => {
-            if (step < SEQUENCE.length - 1) {
+            if (step < activeSequence.length - 1) {
                 setStep(prev => prev + 1);
             }
         }, times[step] || 2000);
@@ -26,7 +28,7 @@ export default function SmartLoader() {
         return () => clearTimeout(timer);
     }, [step]);
 
-    const CurrentComp = SEQUENCE[step].Component;
+    const CurrentComp = activeSequence[step].Component;
 
     return (
         <div style={{
@@ -55,14 +57,14 @@ export default function SmartLoader() {
                 fontSize: 16, fontWeight: 500, letterSpacing: '0.05em',
                 animation: 'slideUpFade 0.5s ease-out', color: step === 3 ? 'var(--primary)' : 'var(--text-secondary)'
             }}>
-                {SEQUENCE[step].text}
+                {activeSequence[step].text}
             </h3>
 
             {/* Progress Bar */}
             <div style={{ width: 140, height: 2, background: 'rgba(255,255,255,0.1)', marginTop: 24, borderRadius: 2, overflow: 'hidden' }}>
                 <div style={{
                     height: '100%', background: 'var(--primary)',
-                    width: `${((step + 1) / SEQUENCE.length) * 100}%`,
+                    width: `${((step + 1) / activeSequence.length) * 100}%`,
                     transition: 'width 0.5s ease-out'
                 }} />
             </div>

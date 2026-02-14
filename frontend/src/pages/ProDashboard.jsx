@@ -6,11 +6,11 @@ import {
     Activity, Play, Zap, Shield, Target, Award, Terminal, BrainCircuit, Search
 } from 'lucide-react';
 import NinjaLoader from '../components/NinjaLoader';
-import NewsIntelligence from '../components/NewsIntelligence';
 import {
-    NinjaAI, NinjaHeadOne, NinjaSlicing, NinjaTarget, NinjaRocket, NinjaSuccess, RandomNinja
+    NinjaAI, NinjaHeadOne, NinjaSlicing, NinjaTarget, NinjaRocket, NinjaSuccess, RandomNinja, NinjaMeditating, NinjaChaos, NinjaLogic
 } from '../components/NinjaIllustrations';
 import StockDetailModal from '../components/StockDetailModal';
+import SmartLoader from '../components/SmartLoader';
 
 import { usePostHog } from 'posthog-js/react';
 
@@ -231,7 +231,6 @@ export default function ProDashboard() {
                 <div style={{ display: 'flex', gap: 12, marginBottom: 30, flexWrap: 'wrap' }}>
                     {[
                         { id: 'scan', label: 'Market Scanner', icon: Target },
-                        { id: 'intelligence', label: 'Sentiment AI', icon: BrainCircuit },
                         { id: 'moonshot', label: 'Moonshot Scout', icon: Zap, highlight: true },
                     ].map(tab => (
                         <button
@@ -354,32 +353,7 @@ export default function ProDashboard() {
                         {/* 4. Results Phase */}
                         {activeTab === 'scan' && showResults && (
                             <div className="results-grid animate-enter">
-                                {/* Batch Analysis Controls */}
-                                <div className="sentiment-sticky-bar" style={{
-                                    position: 'sticky', top: 'calc(var(--banner-height, 0px) + 84px)', zIndex: 100,
-                                    background: 'rgba(5, 5, 16, 0.95)', backdropFilter: 'blur(10px)',
-                                    borderRadius: 16, padding: '12px 24px', border: '1px solid var(--primary-dark)',
-                                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                                    marginBottom: 30, boxShadow: '0 10px 30px rgba(0,0,0,0.5)'
-                                }}>
-                                    <div style={{ fontSize: 14, color: 'var(--text-secondary)' }}>
-                                        Select stocks for <span className="text-primary font-bold">Deep Sentiment Analysis</span>
-                                        {selectedTickers.size > 0 && <span style={{ marginLeft: 10, color: 'white', fontWeight: 700 }}>{selectedTickers.size} selected</span>}
-                                    </div>
-                                    <div>
-                                        {selectedTickers.size > 0 ? (
-                                            <button
-                                                className="btn btn-primary"
-                                                onClick={runBatchAnalysis}
-                                                style={{ display: 'flex', alignItems: 'center', gap: 8 }}
-                                            >
-                                                <BrainCircuit size={16} /> Analyze Sentiment
-                                            </button>
-                                        ) : (
-                                            <div style={{ fontSize: 12, color: 'var(--text-muted)', fontStyle: 'italic' }}>Select up to 20 tickers</div>
-                                        )}
-                                    </div>
-                                </div>
+                                {/* Sentiment Sticky Bar Removed */}
 
                                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16, marginBottom: 40 }}>
                                     <StatBox label="Total Scanned" value={results.length} icon={NinjaHeadOne} color="var(--text-primary)" />
@@ -427,13 +401,13 @@ export default function ProDashboard() {
                         {activeTab === 'moonshot' && (
                             <div className="moonshot-results animate-enter">
                                 {moonshotLoading ? (
-                                    <div style={{ textAlign: 'center', padding: '100px 0' }}>
-                                        <div style={{ width: 120, height: 120, margin: '0 auto 24px', position: 'relative' }}>
-                                            <NinjaTarget width={120} height={120} style={{ animation: 'spin 4s linear infinite' }} />
-                                            <div style={{ position: 'absolute', inset: 0, border: '2px dashed var(--warning)', borderRadius: '50%', animation: 'ping 2s cubic-bezier(0, 0, 0.2, 1) infinite' }} />
-                                        </div>
-                                        <h3 style={{ fontSize: 24, fontWeight: 900, color: 'var(--warning)', letterSpacing: '4px', textTransform: 'uppercase' }}>Target Locking</h3>
-                                        <p style={{ color: 'var(--text-muted)', marginTop: 8 }}>Analyzing 10x alpha signals and fundamental thrust...</p>
+                                    <div style={{ height: 500 }}>
+                                        <SmartLoader sequence={[
+                                            { text: "Scanning 10x Opportunities...", Component: NinjaTarget },
+                                            { text: "Analyzing Insider Flow...", Component: NinjaMeditating },
+                                            { text: "Calculating Moonshot Probability...", Component: NinjaLogic },
+                                            { text: "Locking Alpha Targets...", Component: NinjaRocket }
+                                        ]} />
                                     </div>
                                 ) : (
                                     <>
@@ -520,37 +494,7 @@ export default function ProDashboard() {
 
                 {/* News Intelligence Modal */}
 
-                {showNewsModal && (
-                    <div style={{
-                        position: 'fixed', inset: 0, zIndex: 1000,
-                        background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(5px)',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center', p: 4
-                    }}>
-                        <div className="glass-card" style={{
-                            width: '90%', maxWidth: 1000, maxHeight: '90vh', overflowY: 'auto',
-                            position: 'relative', border: '1px solid var(--primary-dark)',
-                            boxShadow: '0 0 50px rgba(14, 165, 233, 0.2)'
-                        }}>
-                            <div style={{
-                                position: 'sticky', top: 0, zIndex: 10, background: '#0f172a',
-                                padding: '20px', borderBottom: '1px solid var(--ninja-border)',
-                                display: 'flex', justifyContent: 'space-between', alignItems: 'center'
-                            }}>
-                                <h2 style={{ fontSize: 24, fontWeight: 800, color: 'white' }}>Sentiment Analysis Results</h2>
-                                <div style={{ display: 'flex', gap: 12 }}>
-                                    <button className="btn btn-secondary" onClick={() => {
-                                        setNewsResults([]);
-                                        runBatchAnalysis();
-                                    }}>Refresh</button>
-                                    <button className="btn btn-primary" onClick={() => setShowNewsModal(false)}>Close</button>
-                                </div>
-                            </div>
-                            <div style={{ padding: 20 }}>
-                                <NewsIntelligence data={newsResults} loading={newsLoading} />
-                            </div>
-                        </div>
-                    </div>
-                )}
+
 
                 {selectedStock && (
                     <StockDetailModal

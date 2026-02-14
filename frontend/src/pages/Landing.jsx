@@ -465,11 +465,11 @@ export default function Landing() {
                     .scroll-container {
                         scroll-snap-type: y mandatory !important;
                         height: 100% !important;
-                        overflow-y: scroll !important;
+                        overflow-y: auto !important;
                     }
                     .scroll-section {
                         min-height: 100svh !important;
-                        height: 100svh !important;
+                        height: auto !important;
                         padding: 80px 20px 40px 20px !important;
                         scroll-snap-align: start !important;
                         scroll-snap-stop: always !important;
