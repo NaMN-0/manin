@@ -64,32 +64,37 @@ import requests
 # ─── Basic scan (free after login) ───────────────────────────────────────────
 
 def get_basic_penny_list(limit: int = 50) -> list:
-    """Returns basic penny stock data: ticker, price, volume. No deep analysis."""
+    """Returns basic penny stock data using caching and optimized fetching."""
+    # 1. Try Cache
+    cache_key = f"penny_list_{limit}"
+    cached = CacheService.get(cache_key, max_age_minutes=10)
+    if cached:
+        return cached
+
     universe = get_universe()
     if not universe:
         return []
 
-    # Take a manageable subset
-    tickers = universe[:200]
+    # 2. Optimized Fetching
+    # Fetch a bit more than limit to account for filtering (price < 5, vol > 10k)
+    # But don't fetch fixed 200 if we only need 50.
+    fetch_limit = min(limit * 3, 300) 
+    tickers = universe[:fetch_limit]
+    
     results = []
-
     chunk_size = 50
+    
+    # Process in chunks
     for i in range(0, len(tickers), chunk_size):
+        # Stop if we already have enough results
+        if len(results) >= limit:
+            break
+
         batch = tickers[i : i + chunk_size]
         try:
-            try:
-                import yfinance as yf
-                # Increased timeout and added error handling
-                data = yf.download(batch, period="5d", group_by="ticker", threads=False, progress=False, timeout=20)
-            except (requests.exceptions.Timeout, Exception) as e:
-                print(f"Batch download timeout/error: {e}")
-                # Retry once with longer timeout
-                try:
-                    import yfinance as yf
-                    data = yf.download(batch, period="5d", group_by="ticker", threads=False, progress=False, timeout=30)
-                except Exception:
-                    print(f"Retry failed for batch {i}")
-                    continue
+            import yfinance as yf
+            # Reduced timeout for faster fail-fast
+            data = yf.download(batch, period="5d", group_by="ticker", threads=False, progress=False, timeout=10)
             
             if data is None or data.empty:
                 continue
@@ -103,46 +108,47 @@ def get_basic_penny_list(limit: int = 50) -> list:
                             continue
                         df = data[ticker]
                     
-                    if df.empty:
-                        continue
+                    if df.empty: continue
                         
                     latest = df.iloc[-1]
                     import pandas as pd
-                    if pd.isna(latest["Close"]):
-                        continue
+                    if pd.isna(latest["Close"]): continue
                         
                     price = float(latest["Close"])
                     volume = float(latest["Volume"])
                     
-                    # Calculate daily change percentage
-                    change_pct = 0.0
-                    try:
-                        if len(df) > 1:
-                            prev_close = float(df.iloc[-2]["Close"])
-                            if prev_close > 0:
-                                change_pct = ((price - prev_close) / prev_close) * 100
-                    except Exception:
-                        pass
-                    
-                    if price < 5.0 and volume > 10000:
-                        results.append(
-                            {
-                                "ticker": ticker,
-                                "price": round(price, 4),
-                                "volume": int(volume),
-                                "high": round(float(latest["High"]), 4),
-                                "low": round(float(latest["Low"]), 4),
-                                "changePct": round(change_pct, 2),
-                            }
-                        )
-                except Exception:
-                    continue
-        except Exception as e:
-            print(f"Critical batch error: {e}")
-            continue
+                    # Basic Penny Filter
+                    if price < 5.0 and volume > 5000: # Lowered vol threshold slightly to ensure we get data
+                        
+                        # Calculate change
+                        change_pct = 0.0
+                        try:
+                            if len(df) > 1:
+                                prev = float(df.iloc[-2]["Close"])
+                                if prev > 0:
+                                    change_pct = ((price - prev) / prev) * 100
+                        except: pass
 
+                        results.append({
+                            "ticker": ticker,
+                            "price": round(price, 4),
+                            "volume": int(volume),
+                            "high": round(float(latest["High"]), 4),
+                            "low": round(float(latest["Low"]), 4),
+                            "changePct": round(change_pct, 2),
+                        })
+                except: continue
+        except: continue
+
+    # Sort by volume desc
     results.sort(key=lambda x: x["volume"], reverse=True)
-    return results[:limit]
+    final_data = results[:limit]
+    
+    # 3. Save to Cache
+    if final_data:
+        CacheService.set(cache_key, final_data)
+        
+    return final_data
 
 
 # ─── Full deep scan (pro only) ───────────────────────────────────────────────
