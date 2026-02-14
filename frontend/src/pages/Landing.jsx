@@ -1,4 +1,3 @@
-
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import Footer from '../components/Footer';
@@ -43,11 +42,17 @@ const DigitalRain = ({ intensity = 1 }) => {
 };
 
 // 📜 SECTION
-const ScrollSection = ({ children, style, tall }) => (
-    <div className="scroll-section" style={{
+const ScrollSection = ({ children, style, className = "" }) => (
+    <div className={`scroll-section ${className}`} style={{
         minHeight: '100vh',
-        width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center',
-        position: 'relative', scrollSnapAlign: 'start', padding: '60px 24px', boxSizing: 'border-box',
+        width: '100%',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        position: 'relative',
+        padding: '80px 24px',
+        boxSizing: 'border-box',
+        scrollSnapAlign: 'start',
         ...style,
     }}>
         {children}
@@ -160,7 +165,7 @@ export default function Landing() {
         }}>
             {/* Fixed BG */}
             <div className="landing-bg" style={{
-                position: 'absolute', inset: 0, transition: 'background-color 1s', zIndex: 0,
+                position: 'absolute', inset: 0, transition: 'background-color 1s ease', zIndex: 0,
                 backgroundColor: activeConfig.bg,
             }}>
                 <DigitalRain intensity={currentScene === 0 ? 0.5 : currentScene === 1 ? 1.5 : 0.3} />
@@ -174,13 +179,13 @@ export default function Landing() {
 
             {/* Scroll Container */}
             <div ref={containerRef} className="scroll-container" style={{
-                height: '100%', width: '100%', overflowY: 'scroll',
+                height: '100%', width: '100%', overflowY: 'auto',
                 scrollSnapType: 'y mandatory', position: 'relative', zIndex: 10, scrollBehavior: 'smooth',
             }}>
 
                 {/* ═══ SCENE 1: HOOK ═══ */}
                 <ScrollSection>
-                    <div style={{ textAlign: 'center', position: 'relative', maxWidth: 700, padding: '0 24px' }}>
+                    <div style={{ textAlign: 'center', position: 'relative', maxWidth: 800, padding: '0 24px' }}>
                         <div style={{
                             width: 320, maxWidth: '70vw', height: 320, maxHeight: '40vh',
                             margin: '0 auto 40px', animation: 'float 6s ease-in-out infinite',
@@ -189,17 +194,17 @@ export default function Landing() {
                         </div>
                         <h1 style={{
                             fontSize: 'clamp(40px, 7vw, 80px)', fontWeight: 900, letterSpacing: '-0.04em',
-                            marginBottom: 20, lineHeight: 1.05,
+                            marginBottom: 24, lineHeight: 1.05,
                             background: 'linear-gradient(to bottom right, #fff, #64748b)',
                             WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
                         }}>
                             Welcome to<br /><span style={{ WebkitTextFillColor: '#0ea5e9' }}>KAGE AI</span>
                         </h1>
-                        <p style={{ color: '#94a3b8', fontSize: 'clamp(16px, 2vw, 20px)', lineHeight: 1.6, maxWidth: 520, margin: '0 auto' }}>
+                        <p style={{ color: '#94a3b8', fontSize: 'clamp(16px, 2vw, 20px)', lineHeight: 1.6, maxWidth: 560, margin: '0 auto' }}>
                             AI-powered stock intelligence that finds real opportunities — so you don't have to stare at charts all day.
                         </p>
                         <div style={{
-                            position: 'absolute', bottom: -40, left: '50%', transform: 'translateX(-50%)',
+                            position: 'absolute', bottom: -60, left: '50%', transform: 'translateX(-50%)',
                             opacity: 0.4, animation: 'bounce 2s infinite',
                         }}>
                             <MousePointer2 size={28} />
@@ -209,9 +214,9 @@ export default function Landing() {
 
                 {/* ═══ SCENE 2: THE PROBLEM ═══ */}
                 <ScrollSection>
-                    <div style={{
+                    <div className="scene-grid" style={{
                         display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-                        gap: 48, maxWidth: 1100, padding: '0 32px', alignItems: 'center', width: '100%',
+                        gap: 48, maxWidth: 1100, width: '100%', alignItems: 'center',
                     }}>
                         <div>
                             <h2 style={{ fontSize: 'clamp(28px, 4vw, 48px)', fontWeight: 800, marginBottom: 20, color: '#ef4444', lineHeight: 1.1 }}>
@@ -231,9 +236,9 @@ export default function Landing() {
 
                 {/* ═══ SCENE 3: THE SOLUTION ═══ */}
                 <ScrollSection>
-                    <div style={{
+                    <div className="scene-grid" style={{
                         display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-                        gap: 48, maxWidth: 1100, padding: '0 32px', alignItems: 'center', width: '100%',
+                        gap: 48, maxWidth: 1100, width: '100%', alignItems: 'center',
                     }}>
                         <div style={{ maxWidth: 420, margin: '0 auto' }}>
                             <NinjaSceneAlgo width="100%" height="100%" />
@@ -251,31 +256,31 @@ export default function Landing() {
                     </div>
                 </ScrollSection>
 
-                {/* ═══ SCENE 4: THREE PATHS (Non-symmetric parallel stories) ═══ */}
+                {/* ═══ SCENE 4: THREE PATHS ═══ */}
                 <ScrollSection>
-                    <div style={{ maxWidth: 1200, padding: '0 24px', width: '100%' }}>
+                    <div style={{ maxWidth: 1280, width: '100%' }}>
                         <h2 style={{
                             fontSize: 'clamp(28px, 4vw, 48px)', fontWeight: 900, textAlign: 'center', marginBottom: 48, lineHeight: 1.1,
                         }}>
                             One Platform. <span style={{ color: '#0ea5e9' }}>Every Level.</span>
                         </h2>
 
-                        {/* Improved Grid: responsive and stable */}
-                        <div style={{
+                        <div className="paths-grid" style={{
                             display: 'grid',
-                            gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-                            gap: 20,
+                            gridTemplateColumns: 'repeat(12, 1fr)',
+                            gap: 24,
                             alignItems: 'stretch',
                             width: '100%'
                         }}>
 
-                            {/* PATH 1: Just Starting Out (left, shorter) */}
+                            {/* PATH 1: Just Starting Out */}
                             <div className="path-card" style={{
+                                gridColumn: 'span 4',
                                 background: 'linear-gradient(180deg, rgba(14,165,233,0.06) 0%, rgba(15,23,42,0.6) 100%)',
                                 border: '1px solid rgba(14,165,233,0.15)', borderRadius: 20, padding: '32px 24px',
                                 display: 'flex', flexDirection: 'column',
                             }}>
-                                <div style={{ width: 80, height: 80, marginBottom: 20, opacity: 0.8, transform: 'none' }}>
+                                <div style={{ width: 80, height: 80, marginBottom: 20, opacity: 0.8 }}>
                                     <NinjaInitiate width={80} height={80} />
                                 </div>
                                 <div style={{
@@ -284,32 +289,26 @@ export default function Landing() {
                                 }}>Just starting out?</div>
                                 <h3 style={{ fontSize: 22, fontWeight: 800, marginBottom: 12 }}>Learn & Earn</h3>
                                 <p style={{ fontSize: 14, color: '#94a3b8', lineHeight: 1.6, flex: 1 }}>
-                                    You don't need to be an expert. Start with a free screener that tells you <em>exactly</em> what's
-                                    moving and why. Think of it as a personal market tutor.
+                                    Start with a free screener that tells you exactly what's moving. A personal market tutor.
                                 </p>
                                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 16 }}>
-                                    {['Daily Signals', 'AI Scores', 'Risk Alerts'].map(t => (
-                                        <span key={t} style={{
-                                            fontSize: 11, padding: '4px 10px', borderRadius: 100, fontWeight: 600,
-                                            background: 'rgba(14,165,233,0.1)', color: '#38bdf8', border: '1px solid rgba(14,165,233,0.2)',
-                                        }}>{t}</span>
+                                    {['Daily Signals', 'AI Scores'].map(t => (
+                                        <span key={t} className="tag-pill">{t}</span>
                                     ))}
                                 </div>
                             </div>
 
-                            {/* PATH 2: Serious Trader (center, tallest, featured) */}
-                            <div className="path-card" style={{
+                            {/* PATH 2: Serious Trader (Featured) */}
+                            <div className="path-card featured" style={{
+                                gridColumn: 'span 4',
                                 background: 'linear-gradient(180deg, rgba(14,165,233,0.12) 0%, rgba(15,23,42,0.8) 100%)',
                                 border: '1px solid rgba(14,165,233,0.3)', borderRadius: 24, padding: '40px 32px',
                                 display: 'flex', flexDirection: 'column', position: 'relative',
                                 boxShadow: '0 20px 60px rgba(14,165,233,0.1)',
-                                transform: 'translateY(-12px)',
+                                transform: 'translateY(-12px)', zIndex: 2
                             }}>
-                                <div style={{
-                                    position: 'absolute', top: 16, right: 16, background: '#0ea5e9', color: 'white',
-                                    fontSize: 10, fontWeight: 700, padding: '3px 10px', borderRadius: 100, letterSpacing: '0.05em',
-                                }}>MOST POPULAR</div>
-                                <div style={{ width: 100, height: 100, marginBottom: 20, transform: 'none' }}>
+                                <div className="popular-tag">MOST POPULAR</div>
+                                <div style={{ width: 100, height: 100, marginBottom: 20 }}>
                                     <NinjaMaster width={100} height={100} />
                                 </div>
                                 <div style={{
@@ -318,27 +317,23 @@ export default function Landing() {
                                 }}>Ready to get serious?</div>
                                 <h3 style={{ fontSize: 26, fontWeight: 800, marginBottom: 12 }}>Command Center</h3>
                                 <p style={{ fontSize: 15, color: '#cbd5e1', lineHeight: 1.6, flex: 1 }}>
-                                    Unlock the full power of AI. Real-time scans across every sector. Penny stock breakout
-                                    detection. Custom watchlists that adapt to your strategy. This is where most traders
-                                    find their edge.
+                                    Real-time scans, Penny stock breakouts, and custom watchlists. Find your edge.
                                 </p>
                                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 20 }}>
-                                    {['Real-time AI', 'Unlimited Scans', 'Penny Breakouts', 'Custom Strategy'].map(t => (
-                                        <span key={t} style={{
-                                            fontSize: 11, padding: '4px 10px', borderRadius: 100, fontWeight: 600,
-                                            background: 'rgba(14,165,233,0.15)', color: '#7dd3fc', border: '1px solid rgba(14,165,233,0.25)',
-                                        }}>{t}</span>
+                                    {['Real-time AI', 'Unlimited Scans', 'Penny Breakouts'].map(t => (
+                                        <span key={t} className="tag-pill featured">{t}</span>
                                     ))}
                                 </div>
                             </div>
 
-                            {/* PATH 3: Capital Manager (right, compact, premium) */}
+                            {/* PATH 3: Capital Manager */}
                             <div className="path-card" style={{
+                                gridColumn: 'span 4',
                                 background: 'linear-gradient(180deg, rgba(245,158,11,0.06) 0%, rgba(15,23,42,0.6) 100%)',
                                 border: '1px solid rgba(245,158,11,0.15)', borderRadius: 20, padding: '32px 24px',
                                 display: 'flex', flexDirection: 'column',
                             }}>
-                                <div style={{ width: 80, height: 80, marginBottom: 20, opacity: 0.8, transform: 'none' }}>
+                                <div style={{ width: 80, height: 80, marginBottom: 20, opacity: 0.8 }}>
                                     <NinjaDiamond width={80} height={80} />
                                 </div>
                                 <div style={{
@@ -347,15 +342,11 @@ export default function Landing() {
                                 }}>Managing real capital?</div>
                                 <h3 style={{ fontSize: 22, fontWeight: 800, marginBottom: 12, color: '#fbbf24' }}>Elite Access</h3>
                                 <p style={{ fontSize: 14, color: '#94a3b8', lineHeight: 1.6, flex: 1 }}>
-                                    For traders who treat this like a business. 1-on-1 strategy calls, early access to new
-                                    features, and direct input into what we build next.
+                                    1-on-1 strategy calls, priority features, and direct input into our roadmap.
                                 </p>
                                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 16 }}>
-                                    {['1-on-1 Strategy', 'Early Access', 'Priority'].map(t => (
-                                        <span key={t} style={{
-                                            fontSize: 11, padding: '4px 10px', borderRadius: 100, fontWeight: 600,
-                                            background: 'rgba(245,158,11,0.1)', color: '#fbbf24', border: '1px solid rgba(245,158,11,0.2)',
-                                        }}>{t}</span>
+                                    {['1-on-1 Strategy', 'Early Access'].map(t => (
+                                        <span key={t} className="tag-pill gold">{t}</span>
                                     ))}
                                 </div>
                             </div>
@@ -371,10 +362,10 @@ export default function Landing() {
                             position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
                             opacity: 0.04, pointerEvents: 'none', zIndex: 0
                         }}>
-                            <span style={{ fontSize: '22vw', fontWeight: 950, color: 'white', letterSpacing: '-0.05em' }}>SIGNAL</span>
+                            <span style={{ fontSize: 'clamp(80px, 20vw, 300px)', fontWeight: 950, color: 'white', letterSpacing: '-0.05em' }}>SIGNAL</span>
                         </div>
                         <div style={{
-                            width: 'min(500px, 80vw)', height: 'min(500px, 70vh)', position: 'relative', zIndex: 10,
+                            width: 'min(500px, 80vw)', height: 'min(500px, 50vh)', position: 'relative', zIndex: 10,
                             filter: 'drop-shadow(0 0 40px rgba(14,165,233,0.4))',
                             animation: 'float 6s ease-in-out infinite',
                         }}>
@@ -382,7 +373,7 @@ export default function Landing() {
                         </div>
                         <h2 style={{
                             fontSize: 'clamp(24px, 4vw, 48px)', fontWeight: 900, color: '#f59e0b',
-                            letterSpacing: '0.05em', marginTop: 24,
+                            letterSpacing: '0.05em', marginTop: 32,
                         }}>
                             Clear Signal. Decisive Action.
                         </h2>
@@ -390,15 +381,12 @@ export default function Landing() {
                 </ScrollSection>
 
                 {/* ═══ SCENE 6: SINGLE CTA ═══ */}
-                <ScrollSection style={{
-                    background: 'rgba(15,23,42,0.5)', backdropFilter: 'blur(10px)',
-                    flexDirection: 'column', paddingBottom: 0, minHeight: '120vh' // Slightly taller to allow footer space
-                }}>
+                <ScrollSection style={{ padding: 0, display: 'flex', flexDirection: 'column' }}>
                     <div style={{
                         flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                        textAlign: 'center', maxWidth: 600, width: '100%', padding: '80px 24px'
+                        textAlign: 'center', maxWidth: 800, width: '100%', padding: '60px 24px'
                     }}>
-                        <div style={{ width: 180, height: 180, margin: '0 auto 32px' }}>
+                        <div style={{ width: 140, height: 140, margin: '0 auto 24px' }}>
                             <NinjaSceneVictory width="100%" height="100%" />
                         </div>
 
@@ -419,10 +407,6 @@ export default function Landing() {
                         }}>
                             Get Started <ArrowRight size={20} />
                         </button>
-
-                        <p style={{ color: '#475569', fontSize: 13, marginTop: 24 }}>
-                            Join 1,000+ early adopters
-                        </p>
                     </div>
 
                     <div style={{ width: '100%', borderTop: '1px solid rgba(255,255,255,0.05)', background: '#050510' }}>
@@ -451,65 +435,94 @@ export default function Landing() {
                     0%, 100% { opacity: 1; }
                     50% { opacity: 0; }
                 }
-                
+                @keyframes fadeInUp {
+                    from { opacity: 0; transform: translateY(10px); }
+                    to { opacity: 1; transform: translateY(0); }
+                }
+
+                .text-gradient {
+                    background: linear-gradient(135deg, #0ea5e9, #a855f7);
+                    -webkit-background-clip: text;
+                    -webkit-text-fill-color: transparent;
+                }
+
+                .tag-pill {
+                    font-size: 11px;
+                    padding: 4px 10px;
+                    border-radius: 100px;
+                    font-weight: 600;
+                    background: rgba(14,165,233,0.1);
+                    color: #38bdf8;
+                    border: 1px solid rgba(14,165,233,0.2);
+                }
+                .tag-pill.featured {
+                    background: rgba(14,165,233,0.15);
+                    color: #7dd3fc;
+                    border: 1px solid rgba(14,165,233,0.25);
+                }
+                .tag-pill.gold {
+                    background: rgba(245,158,11,0.1);
+                    color: #fbbf24;
+                    border: 1px solid rgba(245,158,11,0.2);
+                }
+                .popular-tag {
+                    position: absolute; top: 16px; right: 16px;
+                    background: #0ea5e9; color: white;
+                    font-size: 10px; font-weight: 700;
+                    padding: 3px 10px; border-radius: 100px;
+                    letter-spacing: 0.05em;
+                }
+
+                /* Responsive Grid for Scenes */
+                @media (max-width: 900px) {
+                    .paths-grid {
+                        display: flex !important;
+                        flex-direction: column;
+                        gap: 16px !important;
+                    }
+                    .path-card {
+                        grid-column: auto !important;
+                    }
+                    .path-card.featured {
+                        transform: none !important;
+                        order: -1; /* Show popular first on mobile */
+                    }
+                }
+
                 @media (max-width: 768px) {
                     .landing-container {
                         height: calc(100svh - 64px) !important;
-                        overflow-y: scroll !important;
-                        scroll-snap-type: y mandatory !important;
                     }
-                    .landing-bg {
-                        position: absolute !important;
-                        height: 100% !important;
-                    }
-                    .scroll-container {
-                        scroll-snap-type: y mandatory !important;
-                        height: 100% !important;
-                        overflow-y: auto !important;
-                    }
-                    .scroll-section {
-                        min-height: 100svh !important;
-                        height: auto !important;
-                        padding: 80px 20px 40px 20px !important;
-                        scroll-snap-align: start !important;
-                        scroll-snap-stop: always !important;
-                        display: flex !important;
-                        flex-direction: column !important;
-                        justify-content: center !important;
-                    }
-                    
-                    /* Hide Companion on Mobile */
                     .manin-companion { display: none !important; }
                     
-                    /* Stack grids */
-                    div[style*="grid-template-columns"] {
-                        grid-template-columns: 1fr !important;
+                    /* Reset Scroll Behavior for Mobile to be simpler */
+                    .scroll-container {
+                        scroll-snap-type: y mandatory;
                     }
-                    /* Typography scaling */
-                    h1 { font-size: 32px !important; }
-                    h2 { font-size: 24px !important; }
-                    h3 { font-size: 20px !important; }
-                    p { font-size: 14px !important; }
-
-                    /* Simplify Three Paths Cards */
-                    .path-card {
-                        padding: 16px !important;
-                        min-height: auto !important;
-                        transform: none !important;
-                        box-shadow: none !important;
-                        border: 1px solid rgba(14,165,233,0.2) !important;
-                        margin-bottom: 8px !important;
-                    }
-                    .path-card svg {
-                        width: 40px !important;
-                        height: 40px !important;
-                        margin-bottom: 8px !important;
+                    .scroll-section {
+                        min-height: 100svh;
+                        padding: 60px 20px;
+                        height: auto;
                     }
                     
-                    /* Ensure Three Paths fits on one screen */
-                    .scroll-section:has(.path-card) {
-                        justify-content: flex-start !important;
-                        padding-top: 100px !important;
+                    /* Scene Grids to Column */
+                    .scene-grid {
+                        grid-template-columns: 1fr !important;
+                        gap: 32px !important;
+                        text-align: center;
+                    }
+
+                    /* Adjust typography */
+                    h1 { font-size: 36px !important; }
+                    h2 { font-size: 28px !important; }
+                    p { font-size: 16px !important; }
+
+                    /* Fix Footer Section */
+                    .scroll-section:last-child {
+                        height: auto !important;
+                        min-height: auto !important;
+                        justify-content: flex-start;
+                        padding-top: 40px;
                     }
                 }
             `}</style>
