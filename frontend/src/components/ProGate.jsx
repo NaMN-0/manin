@@ -41,7 +41,7 @@ export default function ProGate({ children }) {
         );
     }
 
-    if (isPro || (bypassGate && !hasUsedTrial)) return children;
+    if (isPro || bypassGate) return children;
 
     async function handleSubscribe() {
         setLoading(true);
