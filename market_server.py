@@ -1,28 +1,65 @@
 import streamlit as st
 import yfinance as yf
 import pandas as pd
-import pandas_ta_classic as ta
-import plotly.graph_objects as go
+import os
+import gc
+import sys
 from datetime import datetime, timedelta
-from textblob import TextBlob
-from GoogleNews import GoogleNews
 import time
 import market_loader
 from dotenv import load_dotenv
+
+# Lazy load expensive libraries only when needed
+# import pandas_ta_classic as ta
+# import plotly.graph_objects as go
+# from textblob import TextBlob
+# from GoogleNews import GoogleNews
 
 load_dotenv(dotenv_path='api/.env')
 
 # --- CONFIGURATION ---
 st.set_page_config(layout="wide", page_title="Market Insight Engine")
 
+# --- MEMORY OPTIMIZATION ---
+def optimize_dataframe(df):
+    """
+    Downcast float64 to float32 to save memory.
+    Drop unused columns if possible.
+    """
+    if df is None or df.empty:
+        return df
+    
+    # Keep only necessary columns for analysis if we were to be strict,
+    # but pandas_ta might need Open/High/Low/Close/Volume/Adj Close.
+    # So we just downcast floats.
+    fcols = df.select_dtypes('float').columns
+    df[fcols] = df[fcols].astype('float32')
+    return df
+
 # --- 1. DATA INGESTION ENGINE ---
 @st.cache_data(ttl=300) 
 def get_data(ticker):
     try:
         # Download last 6 months of data
-        df = yf.download(ticker, period="6mo", interval="1d", progress=False)
+        # auto_adjust=True often simplifies column maps (Open, High, Low, Close, Volume)
+        df = yf.download(ticker, period="6mo", interval="1d", progress=False, auto_adjust=False)
+        
         if df.empty:
             return None
+            
+        # Fix MultiIndex columns if present (common in new yfinance)
+        if isinstance(df.columns, pd.MultiIndex):
+            try:
+                # If the top level is Ticker, drop it.
+                # If headers are Price, Ticker -> distinct
+                # Usually yf.download(..., group_by='ticker') vs default
+                # basic download of single ticker often has (Price, Ticker) or just Price
+                if df.columns.nlevels > 1:
+                     df.columns = df.columns.get_level_values(0)
+            except IndexError:
+                pass
+
+        df = optimize_dataframe(df)
         return df
     except Exception as e:
         # print(f"Error fetching {ticker}: {e}") # Reduce log noise
@@ -32,6 +69,10 @@ def get_data(ticker):
 @st.cache_data(ttl=3600)  # Cache for 1 hour
 def get_sentiment(ticker):
     try:
+        # Lazy import
+        from GoogleNews import GoogleNews
+        from textblob import TextBlob
+
         googlenews = GoogleNews(period='7d')
         googlenews.search(f"{ticker} stock")
         result = googlenews.result()
@@ -53,15 +94,26 @@ def get_sentiment(ticker):
 
 # --- 3. THE STRATEGY ENGINE (The "Brain") ---
 def analyze_stock(df, ticker):
+    # Lazy import
+    import pandas_ta_classic as ta
+
     # Ensure columns are flat (fix for some yfinance versions)
     if isinstance(df.columns, pd.MultiIndex):
         try:
             df.columns = df.columns.get_level_values(0)
         except IndexError:
             pass
+            
+    # Copy to avoid SettingWithCopy on cached data if it wasn't a deep copy
+    # But usually we want to modify a local version.
+    # Since we return a dict with 'latest', we might not need to copy full DF if we are careful,
+    # but pandas_ta appends to the DF.
+    # To be safe and avoid mutating cached dataframe:
+    df = df.copy()
 
     # Calculate Indicators using pandas_ta
     try:
+        # Timeout/Memory protection: TA can be heavy on very large DFs, but 6mo is small.
         df.ta.rsi(length=14, append=True)
         df.ta.sma(length=50, append=True) # Trend
         df.ta.sma(length=200, append=True) # Long Trend
@@ -185,7 +237,11 @@ def quick_screen(tickers_batch):
                     passed_tickers.append(ticker)
             except Exception:
                 continue
-                
+        
+        # Explicit garbage collection after batch processing
+        del data
+        gc.collect()
+        
         return passed_tickers
     except Exception as e:
         print(f"Batch download error: {e}")
@@ -215,10 +271,14 @@ elif universe_option == "Dow 30":
     with st.spinner("Loading Dow 30..."):
         TICKERS = market_loader.get_dow_tickers()
 elif universe_option == "Full Market":
-    st.sidebar.warning("⚠️ Full Market scan is very slow!")
-    if st.sidebar.button("Load Full Universe"):
+    st.sidebar.warning("⚠️ Full Market scan is very slow and may hit memory limits!")
+    if st.sidebar.button("Load Full Universe (Risk of Timeout)"):
          with st.spinner("Loading Full Market (~3000+ tickers)..."):
-            TICKERS = market_loader.load_full_universe()
+            # Limit full market load primarily
+            all_tickers = market_loader.load_full_universe()
+            # Safety cap for free tier
+            TICKERS = all_tickers
+            st.warning(f"Loaded {len(TICKERS)} tickers. Consider simpler universe for speed.")
     else:
         TICKERS = []
         st.info("Click button in sidebar to load full universe.")
@@ -233,19 +293,27 @@ if st.button("Start Analysis"):
         
         # Phase 1: Quick Scan (if universe is large)
         candidates = TICKERS
-        if len(TICKERS) > 20:
+        
+        # Only run quick scan if we have enough tickers to warrant it
+        if universe_option == "Full Market" or len(TICKERS) > 20:
             st.info("Phase 1: Running Quick Scan (Price > $5, Vol > 500k)...")
             progress_bar_scan = st.progress(0)
-            batch_size = 50
+            batch_size = 50 # Reduced from potentially larger batches
             filtered_candidates = []
             
             total_batches = (len(TICKERS) + batch_size - 1) // batch_size
             
-            for i in range(0, len(TICKERS), batch_size):
-                batch = TICKERS[i:i+batch_size]
+            for i, idx_start in enumerate(range(0, len(TICKERS), batch_size)):
+                batch = TICKERS[idx_start:idx_start+batch_size]
                 passed = quick_screen(batch)
                 filtered_candidates.extend(passed)
-                progress_bar_scan.progress((i + batch_size) / len(TICKERS) if (i + batch_size) < len(TICKERS) else 1.0)
+                
+                # Update progress
+                progress = (i + 1) / total_batches
+                progress_bar_scan.progress(min(progress, 1.0))
+                
+                # Sleep briefly to yield CPU
+                time.sleep(0.05)
             
             candidates = filtered_candidates
             st.success(f"Quick Scan Complete. Found {len(candidates)} candidates.")
@@ -254,6 +322,12 @@ if st.button("Start Analysis"):
         st.info(f"Phase 2: Deep Technical Analysis on {len(candidates)} stocks...")
         progress_bar_analysis = st.progress(0)
         
+        # Hard limit on how many deep analyses we run to prevent timeout/OOM
+        MAX_DEEP_ANALYSIS = 50
+        if len(candidates) > MAX_DEEP_ANALYSIS:
+            st.warning(f"Capping deep analysis to top {MAX_DEEP_ANALYSIS} candidates to preserve resources.")
+            candidates = candidates[:MAX_DEEP_ANALYSIS]
+
         for i, ticker in enumerate(candidates):
             # Fetch full history for deep analysis (indicators need history)
             df = get_data(ticker)
@@ -269,9 +343,14 @@ if st.button("Start Analysis"):
                         "analysis": analysis,
                         "sentiment": sentiment_score,
                         "headlines": headlines,
-                        "df": df
+                        "df": df # Note: Keeping DF in memory for plotting
                     })
+            
             progress_bar_analysis.progress((i + 1) / len(candidates))
+            
+            # Frequent GC
+            if i % 10 == 0:
+                gc.collect()
         
         st.markdown("---")
         
@@ -280,6 +359,9 @@ if st.button("Start Analysis"):
         
         if not results:
             st.warning("No stocks matched the criteria.")
+        
+        # Lazy import Plotly
+        import plotly.graph_objects as go
         
         for res in results:
             ticker = res['ticker']
@@ -294,8 +376,11 @@ if st.button("Start Analysis"):
                     st.subheader(f"{ticker}")
                     # Safe percentage calculation
                     try:
-                        pct_change = ((analysis['latest']['Close'] - res['df'].iloc[-2]['Close'])/res['df'].iloc[-2]['Close']*100)
-                        st.metric("Price", f"${analysis['latest']['Close']:.2f}", f"{pct_change:.2f}%")
+                        # use Get to avoid key error if iloc-2 doesn't exist (though guarded in analyze)
+                        prev_close = res['df'].iloc[-2]['Close']
+                        curr_close = analysis['latest']['Close']
+                        pct_change = ((curr_close - prev_close)/prev_close * 100)
+                        st.metric("Price", f"${curr_close:.2f}", f"{pct_change:.2f}%")
                     except Exception:
                          st.metric("Price", f"${analysis['latest']['Close']:.2f}", "0.00%")
                     
@@ -319,17 +404,20 @@ if st.button("Start Analysis"):
 
                 with col3:
                     # Plotly Mini Chart
-                    # Fix for Plotly Candlestick which needs flat index
                     try:
-                        fig = go.Figure(data=[go.Candlestick(x=res['df'].index,
-                                        open=res['df']['Open'],
-                                        high=res['df']['High'],
-                                        low=res['df']['Low'],
-                                        close=res['df']['Close'])])
+                        # Ensure index is datetime for proper plotting
+                        plot_df = res['df']
+                        if not isinstance(plot_df.index, pd.DatetimeIndex):
+                            plot_df.index = pd.to_datetime(plot_df.index)
+                            
+                        fig = go.Figure(data=[go.Candlestick(x=plot_df.index,
+                                        open=plot_df['Open'],
+                                        high=plot_df['High'],
+                                        low=plot_df['Low'],
+                                        close=plot_df['Close'])])
                         fig.update_layout(height=200, margin=dict(l=0, r=0, t=0, b=0), xaxis_rangeslider_visible=False)
                         st.plotly_chart(fig, use_container_width=True)
                     except Exception as e:
                         st.error("Chart Error")
                 
                 st.divider()
-

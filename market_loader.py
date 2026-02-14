@@ -68,7 +68,7 @@ def save_tickers(tickers):
         with open(TICKER_FILE, "w") as f:
             json.dump({"timestamp": str(datetime.datetime.now()), "tickers": tickers}, f)
     except Exception as e:
-        print(f"Error saving cache: {e}")
+        print(f"Warning: Could not save ticker cache (might be read-only filesystem): {e}")
 
 def load_cached_tickers():
     if os.path.exists(TICKER_FILE):

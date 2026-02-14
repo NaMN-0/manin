@@ -34,6 +34,8 @@ def fetch_nasdaq_tickers_robust():
         
         # Clean tickers (remove special chars if needed, though yfinance handles some)
         tickers = [t.strip() for t in tickers]
+        # Sanitize for yfinance: ^ -> -P, / -> -
+        tickers = [t.replace("^", "-P").replace("/", "-") for t in tickers]
         # Remove empty strings
         tickers = [t for t in tickers if t]
         
