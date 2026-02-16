@@ -8,6 +8,7 @@ const client = axios.create({
   headers: {
     "Content-Type": "application/json",
   },
+  timeout: 15000, // 15s timeout to prevent hanging
 });
 
 // Add a response interceptor to handle common errors
@@ -25,15 +26,21 @@ client.interceptors.response.use(
 
 // Add a request interceptor to inject the Supabase token
 client.interceptors.request.use(async (config) => {
+  // If Authorization header is already set (e.g., passed explicitly), skip Supabase session check
+  if (config.headers.Authorization) {
+    return config;
+  }
+
   try {
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-    if (session?.access_token) {
-      config.headers.Authorization = `Bearer ${session.access_token}`;
+    // Only attempt to get session if we are not already processing a clear guest request
+    // This prevents infinite loops or aborts during initial load
+    const { data } = await supabase.auth.getSession();
+    if (data?.session?.access_token) {
+      config.headers.Authorization = `Bearer ${data.session.access_token}`;
     }
   } catch (error) {
-    console.error("Error fetching session for API call:", error);
+    // Squelch errors to allow public endpoints (like market overview) to work even if auth fails
+    // console.warn("Auth interceptor warning:", error);
   }
   return config;
 });

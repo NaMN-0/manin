@@ -115,7 +115,7 @@ export default function PennyStocks() {
     }
   }
 
-  if (loading && !isCracking) {
+  if (loading) {
     return (
       <div
         className="page"
@@ -127,7 +127,7 @@ export default function PennyStocks() {
           paddingTop: 80,
         }}
       >
-        <NinjaTrainingLoader text={`Deploying Cracker Agents...`} />
+        <NinjaTrainingLoader text={isCracking ? "Deciphering Sector Codes..." : "Scanning Global Battlefronts..."} />
       </div>
     );
   }

@@ -254,11 +254,17 @@ export default function MarketOverview() {
               </Link>
             )}
             <span
-              className={`badge ${data?.marketOpen ? "badge-green" : "badge-red"} shine-effect`}
+              className={`badge ${data?.marketOpen && data?.indices?.length > 0 ? "badge-green" : "badge-red"} shine-effect`}
               style={{ height: 36, padding: "0 16px", fontSize: 14 }}
             >
-              {data?.marketOpen ? <Activity size={16} /> : <Clock size={16} />}
-              {data?.marketOpen ? "Sector Active" : "Sector Inactive"}
+              {data?.marketOpen && data?.indices?.length > 0 ? (
+                <Activity size={16} />
+              ) : (
+                <Clock size={16} />
+              )}
+              {data?.marketOpen && data?.indices?.length > 0
+                ? "Sector Active"
+                : "Sector Inactive"}
             </span>
             <button
               className="btn btn-ghost"
@@ -750,50 +756,70 @@ export default function MarketOverview() {
             </h3>
           </div>
           <div style={{ padding: "20px" }}>
-            {data?.topMovers?.map((stock, i) => (
+            {(!data?.topMovers || data.topMovers.length === 0) ? (
               <div
-                key={i}
                 style={{
-                  position: "relative",
-                  paddingLeft: i < 3 ? 40 : 12,
-                  marginBottom: 12,
+                  padding: 40,
+                  textAlign: "center",
+                  color: "var(--text-muted)",
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  gap: 12,
                 }}
               >
-                {i < 3 && (
-                  <div
-                    style={{
-                      position: "absolute",
-                      left: 0,
-                      top: "50%",
-                      transform: "translateY(-50%)",
-                      width: 32,
-                      height: 32,
-                      borderRadius: "8px",
-                      background:
-                        i === 0
-                          ? "var(--amber)"
-                          : i === 1
-                            ? "var(--text-muted)"
-                            : "var(--ninja-border)",
-                      color: i === 0 ? "black" : "var(--text-secondary)",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      fontSize: 14,
-                      fontWeight: 900,
-                      border: "1px solid rgba(255,255,255,0.1)",
-                    }}
-                  >
-                    {i === 0 ? <Crown size={16} /> : i + 1}
-                  </div>
-                )}
-                <StockCard
-                  stock={stock}
-                  compact
-                  onClick={() => setSelectedTicker(stock.ticker)}
-                />
+                <Shield size={48} style={{ opacity: 0.2 }} />
+                <p>No high priority targets detected in current sector scan.</p>
+                <span style={{ fontSize: 12, opacity: 0.7 }}>
+                  0 results found regarding active combatants.
+                </span>
               </div>
-            ))}
+            ) : (
+              data.topMovers.map((stock, i) => (
+                <div
+                  key={i}
+                  style={{
+                    position: "relative",
+                    paddingLeft: i < 3 ? 40 : 12,
+                    marginBottom: 12,
+                  }}
+                >
+                  {i < 3 && (
+                    <div
+                      style={{
+                        position: "absolute",
+                        left: 0,
+                        top: "50%",
+                        transform: "translateY(-50%)",
+                        width: 32,
+                        height: 32,
+                        borderRadius: "8px",
+                        background:
+                          i === 0
+                            ? "var(--amber)"
+                            : i === 1
+                              ? "var(--text-muted)"
+                              : "var(--ninja-border)",
+                        color: i === 0 ? "black" : "var(--text-secondary)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontSize: 14,
+                        fontWeight: 900,
+                        border: "1px solid rgba(255,255,255,0.1)",
+                      }}
+                    >
+                      {i === 0 ? <Crown size={16} /> : i + 1}
+                    </div>
+                  )}
+                  <StockCard
+                    stock={stock}
+                    compact
+                    onClick={() => setSelectedTicker(stock.ticker)}
+                  />
+                </div>
+              ))
+            )}
           </div>
         </div>
 

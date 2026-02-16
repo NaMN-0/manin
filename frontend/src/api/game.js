@@ -1,8 +1,9 @@
 import client from "./client";
 
 export const gameApi = {
-  getStats: async (userId) => {
-    const { data } = await client.get(`/api/meta/stats/${userId}`);
+  getStats: async (userId, token = null) => {
+    const config = token ? { headers: { Authorization: `Bearer ${token}` } } : {};
+    const { data } = await client.get(`/api/meta/stats/${userId}`, config);
     return data;
   },
 

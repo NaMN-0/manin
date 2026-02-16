@@ -23,9 +23,9 @@ export function AuthProvider({ children }) {
   const location = useLocation();
   const didRedirect = useRef(false);
 
-  const fetchGamificationStats = useCallback(async (userId) => {
+  const fetchGamificationStats = useCallback(async (userId, token = null) => {
     try {
-      const stats = await gameApi.getStats(userId);
+      const stats = await gameApi.getStats(userId, token);
       setGamificationStats(stats);
     } catch (error) {
       console.error("Error fetching gamification stats:", error);
@@ -33,10 +33,13 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
-  const checkProStatus = useCallback(async (userId) => {
+  const checkProStatus = useCallback(async (userId, token = null) => {
     try {
       // Endpoint uses JWT to identify user, no need to pass userId in path
-      const { data } = await client.get("/api/payments/status");
+      const config = token
+        ? { headers: { Authorization: `Bearer ${token}` } }
+        : {};
+      const { data } = await client.get("/api/payments/status", config);
       setIsPro(data?.isPro || false);
       setHasUsedTrial(data?.hasUsedTrial || false);
     } catch (error) {
@@ -48,21 +51,38 @@ export function AuthProvider({ children }) {
 
   const loadUserSession = useCallback(async () => {
     setLoading(true);
-    const {
-      data: { session: s },
-    } = await supabase.auth.getSession();
-    // setSession(s); // No longer needed
-    setUser(s?.user ?? null);
+    try {
+      // Create a timeout promise to prevent hanging indefinitely
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("Session fetch timeout")), 5000)
+      );
 
-    if (s?.user) {
-      await checkProStatus(s.user.id);
-      await fetchGamificationStats(s.user.id);
-    } else {
+      const sessionPromise = supabase.auth.getSession();
+
+      const {
+        data: { session: s },
+      } = await Promise.race([sessionPromise, timeoutPromise]);
+
+      setUser(s?.user ?? null);
+
+      if (s?.user) {
+        await checkProStatus(s.user.id, s.access_token);
+        await fetchGamificationStats(s.user.id, s.access_token);
+      } else {
+        setIsPro(false);
+        setHasUsedTrial(false);
+        setGamificationStats(null);
+      }
+    } catch (error) {
+      console.warn("Auth session load failed or timed out:", error);
+      // Fallback: assume logged out
+      setUser(null);
       setIsPro(false);
       setHasUsedTrial(false);
       setGamificationStats(null);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   }, [checkProStatus, fetchGamificationStats]);
 
   useEffect(() => {
@@ -76,8 +96,8 @@ export function AuthProvider({ children }) {
       setUser(s?.user ?? null);
 
       if (event === "SIGNED_IN" && s?.user) {
-        await checkProStatus(s.user.id);
-        await fetchGamificationStats(s.user.id);
+        await checkProStatus(s.user.id, s.access_token);
+        await fetchGamificationStats(s.user.id, s.access_token);
         // Handle redirect after sign-in
         if (!didRedirect.current) {
           didRedirect.current = true;
@@ -95,8 +115,8 @@ export function AuthProvider({ children }) {
         didRedirect.current = false;
         navigate("/", { replace: true });
       } else if (event === "TOKEN_REFRESHED" && s?.user) {
-        await checkProStatus(s.user.id);
-        await fetchGamificationStats(s.user.id);
+        await checkProStatus(s.user.id, s.access_token);
+        await fetchGamificationStats(s.user.id, s.access_token);
       }
       setLoading(false);
     });
