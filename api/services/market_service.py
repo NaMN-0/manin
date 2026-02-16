@@ -402,14 +402,17 @@ def get_smart_batch(letter: Optional[str] = None, sector: Optional[str] = None, 
     Scans a batch of tickers by `letter` OR `sector`.
     Returns candidates and a few top picks.
     """
-    # 1. Get Tickers
-    tickers = []
+    # 0. Initialize return vars early to prevent UnboundLocalError
+    candidates = []
+    accuracy_data = {"accuracy": 0}
     filter_val = letter if letter else sector
     filter_type = "letter" if letter else "sector"
     
     if not filter_val:
-        return {"candidates": [], "top_picks": [], "accuracy_data": {"accuracy": 0}}
+        return {"candidates": [], "top_picks": [], "accuracy_data": accuracy_data}
 
+    # 1. Get Tickers
+    tickers = []
     if universe_type == "penny":
         try:
             import penny_loader
@@ -417,92 +420,81 @@ def get_smart_batch(letter: Optional[str] = None, sector: Optional[str] = None, 
             
             if sector:
                 metadata = penny_loader.get_ticker_metadata()
-                # Exact match for sector
                 tickers = [t for t in all_penny if metadata.get(t, {}).get('sector') == sector]
-                if not tickers and sector == "Technology": # Fallback if empty, maybe try partial match?
-                    # Try to be smarter? No, keep simple.
-                    pass
             elif letter:
                 tickers = [t for t in all_penny if t.startswith(letter.upper())]
-        except ImportError:
+        except Exception:
             tickers = []
-    else:
-        pass
     
     if not tickers:
-        # Fallback empty result
         return {
-            "letter": filter_val, # maintain key name for frontend compatibility or change
+            "letter": filter_val,
             "filter_val": filter_val,
             "filter_type": filter_type,
             "candidates": [], 
             "top_picks": [], 
-            "accuracy_data": {"accuracy": 0}
+            "accuracy_data": accuracy_data
         }
     
-        # 2. Get Accuracy Data
-        accuracy_data = get_sector_accuracy(filter_val, filter_type, universe_type)
+    # 2. Get Accuracy Data
+    accuracy_data = get_sector_accuracy(filter_val, filter_type, universe_type)
+    
+    # 3. Scan
+    if strategy == "momentum":
+        batch_size = 50
+        limit_tickers = tickers[:150]
         
-        # 3. Scan
-        candidates = []
-        if strategy == "momentum":
-            # Penny / Momentum Scan
-            # Scan in sub-batches if large
-            batch_size = 50
-            limit_tickers = tickers[:150] # Hard limit for response time
+        raw_candidates = []
+        for i in range(0, len(limit_tickers), batch_size):
+            batch = limit_tickers[i:i+batch_size]
+            passed = scan_volatility_setup(batch, min_price=0, max_price=5.0)
+            raw_candidates.extend(passed)
             
-            raw_candidates = []
-            for i in range(0, len(limit_tickers), batch_size):
-                batch = limit_tickers[i:i+batch_size]
-                passed = scan_volatility_setup(batch, min_price=0, max_price=5.0)
-                raw_candidates.extend(passed)
-                
-            # Optimized Analysis: Only download what's needed
-            if raw_candidates:
-                import yfinance as yf
-                import pandas as pd
-                
-                # Fetch basic metrics for all candidates in one go
-                # We need at least 2 days to get changePct
-                batch_data = yf.download(raw_candidates[:30], period="5d", group_by='ticker', threads=True, progress=False)
-                
-                for ticker in raw_candidates[:30]:
-                    try:
-                        df = batch_data[ticker] if len(raw_candidates[:30]) > 1 else batch_data
-                        if df.empty or len(df) < 2: continue
-                        
-                        latest = df.iloc[-1]
-                        prev = df.iloc[-2]
-                        price = float(latest['Close'])
-                        change_pct = ((price - float(prev['Close'])) / float(prev['Close'])) * 100
-                        
-                        # Use a lightweight analysis for the table
-                        score = 2 # Base score
-                        signals = []
-                        if price > df['Close'].rolling(window=20).mean().iloc[-1]:
-                            score += 1
-                            signals.append("Above 20-day SMA")
-                        if change_pct > 0:
-                            score += 1
-                            signals.append("Positive Momentum")
-                        
-                        candidates.append({
-                            "ticker": ticker,
-                            "price": check_nan(round(price, 3)),
-                            "changePct": check_nan(round(change_pct, 2)),
-                            "score": score,
-                            "signals": signals[:1], # Keep it light
-                            "verdict": "BULLISH" if score >= 3 else "NEUTRAL"
-                        })
-                    except: continue
+        if raw_candidates:
+            import yfinance as yf
+            import pandas as pd
+            
+            # Fetch basic metrics in one batch
+            batch_data = yf.download(raw_candidates[:30], period="5d", group_by='ticker', threads=True, progress=False)
+            
+            for ticker in raw_candidates[:30]:
+                try:
+                    df = batch_data[ticker] if len(raw_candidates[:30]) > 1 else batch_data
+                    if df.empty or len(df) < 2: continue
+                    
+                    latest = df.iloc[-1]
+                    prev = df.iloc[-2]
+                    price = float(latest['Close'])
+                    change_pct = ((price - float(prev['Close'])) / float(prev['Close'])) * 100
+                    
+                    # Score and metrics
+                    score = 2
+                    signals = []
+                    if price > df['Close'].rolling(window=20).mean().iloc[-1]:
+                        score += 1
+                        signals.append("Above 20-day SMA")
+                    if change_pct > 0:
+                        score += 1
+                        signals.append("Positive Momentum")
+                    
+                    candidates.append({
+                        "ticker": ticker,
+                        "price": check_nan(round(price, 3)),
+                        "changePct": check_nan(round(change_pct, 2)),
+                        "score": score,
+                        "signals": signals[:1],
+                        "verdict": "BULLISH" if score >= 3 else "NEUTRAL"
+                    })
+                except: continue
     
     # 4. Sorting & Curation
-    candidates.sort(key=lambda x: x['score'], reverse=True)
+    if candidates:
+        candidates.sort(key=lambda x: x.get('score', 0), reverse=True)
     
     top_picks = candidates[:3]
     
     return {
-        "letter": filter_val, # Legacy field for frontend which expects 'letter'
+        "letter": filter_val,
         "filter_val": filter_val,
         "filter_type": filter_type,
         "count": len(candidates),

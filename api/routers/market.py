@@ -35,7 +35,6 @@ def analyze(ticker: str):
     return {"status": "ok", "data": result}
     
 @router.get("/smart-scan")
-@router.get("/smart-scan")
 def smart_scan(letter: Optional[str] = None, sector: Optional[str] = None, universe: str = "penny", strategy: str = "momentum"):
     """
     Smart Discovery Mode: Scans a batch of tickers by 'letter' or 'sector'.
