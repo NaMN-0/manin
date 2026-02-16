@@ -1,380 +1,723 @@
-import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
-import api from '../lib/api';
-import { useAuth } from '../context/AuthContext';
+import { useEffect, useState } from "react";
+// import { Link } from "react-router-dom"; // Unused Link import
+// import client from "../api/client"; // Removed unused client import
+import { marketApi } from "../api/market"; // Use the new marketApi
+import { useAuth } from "../context/AuthContext";
+import { useGame } from "../context/GameContext";
 import {
-    Search, RefreshCw, TrendingUp, TrendingDown, ArrowUpDown,
-    Lock, Zap, Filter, ChevronRight, Target, ExternalLink, Crown
-} from 'lucide-react';
-import NinjaTrainingLoader from '../components/NinjaTrainingLoader';
-import StockDetailModal from '../components/StockDetailModal';
-import MobileStockCard from '../components/MobileStockCard';
-import { NinjaPennyRocket, NinjaMaster, NinjaDojo } from '../components/NinjaIllustrations';
-import { usePostHog } from 'posthog-js/react';
+  Zap,
+  Filter,
+  Terminal,
+  Brain,
+  Crown, // Keep Crown as it's used in Top Picks
+  ShieldCheck, // Keep ShieldCheck for Accuracy
+} from "lucide-react";
+import NinjaTrainingLoader from "../components/NinjaTrainingLoader";
+import StockDetailModal from "../components/StockDetailModal";
+// import MobileStockCard from "../components/MobileStockCard"; // Unused MobileStockCard
+import {
+  // NinjaPennyRocket, // Unused NinjaPennyRocket
+  // NinjaMaster, // Unused NinjaMaster
+  NinjaDojo, // Keep NinjaDojo for error state
+  // NinjaLogic, // Unused NinjaLogic
+} from "../components/NinjaIllustrations";
+import { usePostHog } from "posthog-js/react";
 
 export default function PennyStocks() {
-    const { isPro } = useAuth();
-    const [stocks, setStocks] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
-    const [search, setSearch] = useState('');
-    const [sortField, setSortField] = useState('volume');
-    const [sortOrder, setSortOrder] = useState('desc');
-    const [selectedTicker, setSelectedTicker] = useState(null);
-    const posthog = usePostHog();
+  useAuth(); // No longer destructuring, as nothing from useAuth is directly used here
+  const { addXp } = useGame();
+  const [stocks, setStocks] = useState([]);
+  const [topPicks, setTopPicks] = useState([]);
+  const [accuracyData, setAccuracyData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [isCracking, setIsCracking] = useState(false);
+  const [error, setError] = useState(null);
+  // const [currentLetter, setCurrentLetter] = useState("A"); // Unused
+  const [displayLetter, setDisplayLetter] = useState("A");
+  const [selectedTicker, setSelectedTicker] = useState(null);
+  const posthog = usePostHog();
 
-    useEffect(() => {
-        posthog?.capture('viewed_penny_stocks');
-        fetchStocks();
-    }, [posthog]);
+  useEffect(() => {
+    posthog?.capture("viewed_smart_discovery");
+    fetchNextBatch();
+  }, [posthog]);
 
-    async function fetchStocks() {
-        setLoading(true);
-        setError(null);
-        try {
-            const res = await api.get('/penny/basic');
-            if (res.data && res.data.data) {
-                setStocks(res.data.data);
-            }
-        } catch (err) {
-            console.error('Fetch error:', err);
-            setError(err.response?.data?.detail || 'Failed to fetch penny stocks.');
-        } finally {
-            setLoading(false);
+  async function fetchNextBatch() {
+    if (isCracking) return;
+    setLoading(true);
+    setError(null);
+
+    // 1. Initiate Code Cracker Animation
+    setIsCracking(true);
+    const SECTORS = [
+      "Technology",
+      "Healthcare",
+      "Finance",
+      "Energy",
+      "Consumer Discretionary",
+      "Consumer Staples",
+      "Industrials",
+      "Materials",
+      "Utilities",
+      "Real Estate",
+      "Telecommunications",
+    ];
+
+    let crackSteps = 15;
+    const interval = setInterval(() => {
+      setDisplayLetter(SECTORS[Math.floor(Math.random() * SECTORS.length)]);
+      crackSteps--;
+      if (crackSteps <= 0) clearInterval(interval);
+    }, 80);
+
+    try {
+      const randomSector = SECTORS[Math.floor(Math.random() * SECTORS.length)];
+      // Pass sector param instead of letter
+      const res = await marketApi.scanSmartBatch(
+        null,
+        "penny",
+        "momentum",
+        randomSector,
+      );
+      // This needs to use the new marketApi.scanSmartBatch once it's implemented.
+      // const res = await marketApi.scanSmartBatch(null, 'penny', 'momentum', randomSector);
+
+      // Wait for animation if it's too fast
+      await new Promise((r) => setTimeout(r, 1200));
+
+      if (res && res.data) {
+        // Check res and res.data
+        const data = res.data; // Directly use res.data
+        // Backend returns 'letter' as key mostly for compat, but might send 'filter_val'
+        const sectorName = data.filter_val || data.letter || randomSector;
+        // setCurrentLetter(sectorName); // Unused
+        if (interval) clearInterval(interval); // Stop animation immediately
+        setDisplayLetter(sectorName);
+        setStocks(data.candidates || []);
+        setTopPicks(data.top_picks || []);
+        setAccuracyData(data.accuracy_data || null);
+
+        if (data.candidates.length > 0) {
+          const bonus = data.accuracy_data?.accuracy > 70 ? 25 : 10;
+          addXp(
+            bonus,
+            `Cracked Sector ${sectorName} (Accuracy: ${data.accuracy_data?.accuracy}%)`,
+          );
         }
+      }
+    } catch (error) {
+      // Use 'error' instead of 'err'
+      console.error("Fetch error:", error);
+      setError(error.response?.data?.detail || "Failed to crack sector code.");
+    } finally {
+      setLoading(false);
+      setIsCracking(false);
     }
+  }
 
-    const sortedStocks = () => {
-        return stocks
-            .filter(s => s.ticker.toLowerCase().includes(search.toLowerCase()))
-            .sort((a, b) => {
-                const aVal = a[sortField];
-                const bVal = b[sortField];
-                if (sortOrder === 'asc') return aVal > bVal ? 1 : -1;
-                return aVal < bVal ? 1 : -1;
-            });
-    };
-
-    const toggleSort = (field) => {
-        if (sortField === field) {
-            setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
-        } else {
-            setSortField(field);
-            setSortOrder('desc');
-        }
-    };
-
-    if (loading) {
-        return (
-            <div className="page" style={{
-                minHeight: '100vh',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                paddingTop: 80
-            }}>
-                <NinjaTrainingLoader text="Finding hidden opportunities..." />
-            </div>
-        );
-    }
-
+  if (loading && !isCracking) {
     return (
-        <div className="page" style={{ paddingBottom: 80 }}>
-            {/* Background Decoration */}
-            <div style={{ position: 'fixed', top: -100, right: -100, opacity: 0.05, pointerEvents: 'none', zIndex: 0 }}>
-                <NinjaDojo width={600} height={600} />
+      <div
+        className="page"
+        style={{
+          minHeight: "100vh",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          paddingTop: 80,
+        }}
+      >
+        <NinjaTrainingLoader text={`Deploying Cracker Agents...`} />
+      </div>
+    );
+  }
+
+  return (
+    <div className="page" style={{ paddingBottom: 80 }}>
+      {/* Background Decoration */}
+      <div
+        style={{
+          position: "fixed",
+          top: -100,
+          right: -100,
+          opacity: 0.05,
+          pointerEvents: "none",
+          zIndex: 0,
+        }}
+      >
+        <NinjaDojo width={600} height={600} />
+      </div>
+
+      <div className="container" style={{ position: "relative", zIndex: 1 }}>
+        {/* Sector Radar UI */}
+        <div style={{ marginBottom: 40 }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
+            <h2 style={{ fontSize: 20, fontWeight: 700, display: "flex", alignItems: "center", gap: 10 }}>
+              <div className="radar-pulse"></div> Sector Radar
+            </h2>
+            <div style={{ fontSize: 12, color: "var(--text-muted)", fontFamily: "monospace" }}>
+              SCANNING PROTOCOL: ACTIVE
             </div>
+          </div>
 
-            <div className="container" style={{ position: 'relative', zIndex: 1 }}>
-                {/* Header */}
-                <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    marginBottom: 32,
-                    paddingTop: 24,
-                    flexWrap: 'wrap-reverse', // Wrap reverse to keep text on top on mobile if needed, or side-by-side
-                    gap: 24,
-                }}>
-                    <div style={{ flex: 1, minWidth: 300 }}>
-                        <h1 style={{ fontSize: 42, fontWeight: 900, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 16 }}>
-                            <div style={{
-                                width: 56, height: 56, borderRadius: 16,
-                                background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.2), rgba(245, 158, 11, 0.05))',
-                                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                border: '1px solid rgba(245, 158, 11, 0.3)',
-                                boxShadow: '0 8px 16px rgba(245, 158, 11, 0.1)'
-                            }}>
-                                <Target size={28} color="var(--amber)" />
-                            </div>
-                            Small Cap <span className="text-gradient">Explorer</span>
-                        </h1>
-                        <p style={{ color: 'var(--text-secondary)', fontSize: 16, lineHeight: 1.6, maxWidth: 600 }}>
-                            Monitoring <strong>{stocks.length}</strong> active symbols under $5.
-                            Uses <strong>Momentum v2</strong> logic to detect patterns before they break out.
-                        </p>
-                    </div>
+          <div className="sector-grid" style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))",
+            gap: 12
+          }}>
+            {["Technology", "Healthcare", "Finance", "Energy", "Consumer Discretionary", "Materials", "Industrials", "Real Estate", "Utilities", "Telecommunications"].map((sector) => {
+              const isActive = displayLetter === sector;
+              return (
+                <button
+                  key={sector}
+                  onClick={() => {
+                    if (!loading && displayLetter !== sector) {
+                      // Manually trigger fetch for this sector
+                      setStocks([]); // Clear current
+                      setTopPicks([]);
+                      setDisplayLetter(sector);
+                      // We need to call the fetch logic. 
+                      // Ideally refactor fetchNextBatch to take an arg, 
+                      // but for now relying on effect or explicit call.
+                      // Let's call a new separate function or refactor fetchNextBatch.
+                      marketApi.scanSmartBatch(null, 'penny', 'momentum', sector)
+                        .then(res => {
+                          if (res.data) {
+                            setStocks(res.data.candidates || []);
+                            setTopPicks(res.data.top_picks || []);
+                            setAccuracyData(res.data.accuracy_data || null);
+                            if (res.data.candidates.length > 0) {
+                              addXp(10, `Scanned Sector: ${sector}`);
+                            }
+                          }
+                        })
+                        .catch(err => {
+                          console.error(err);
+                          setError("Sector Scan Failed");
+                        });
+                    }
+                  }}
+                  className={`sector-chip ${isActive ? "active" : ""}`}
+                  style={{
+                    padding: "12px 8px",
+                    borderRadius: 12,
+                    background: isActive ? "rgba(14, 165, 233, 0.15)" : "rgba(255,255,255,0.03)",
+                    border: isActive ? "1px solid var(--primary)" : "1px solid rgba(255,255,255,0.1)",
+                    color: isActive ? "white" : "var(--text-secondary)",
+                    fontSize: 13,
+                    fontWeight: isActive ? 700 : 500,
+                    cursor: "pointer",
+                    textAlign: "center",
+                    transition: "all 0.2s ease",
+                    position: "relative",
+                    overflow: "hidden"
+                  }}
+                >
+                  {isActive && (
+                    <div style={{
+                      position: "absolute",
+                      bottom: 0, left: 0, width: "100%", height: 3,
+                      background: "var(--primary)",
+                      boxShadow: "0 0 10px var(--primary)"
+                    }} />
+                  )}
+                  {sector}
+                </button>
+              )
+            })}
+          </div>
+        </div>
 
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-                        <div className="illustration-float">
-                            <NinjaPennyRocket width={140} height={140} />
-                        </div>
+        {error ? (
+          <div
+            className="glass-card"
+            style={{ textAlign: "center", padding: 64 }}
+          >
+            <NinjaDojo
+              width={120}
+              height={120}
+              style={{ opacity: 0.5, marginBottom: 24 }}
+            />
+            <h3 style={{ fontSize: 20, fontWeight: 700, marginBottom: 8 }}>
+              Signal Blocked
+            </h3>
+            <p style={{ color: "var(--text-secondary)", marginBottom: 24 }}>
+              {error}
+            </p>
+            <button className="btn btn-primary" onClick={fetchNextBatch}>
+              Retry Sequence
+            </button>
+          </div>
+        ) : (
+          <>
+            {/* Accuracy & Success Rates */}
+            {accuracyData && (
+              <div
+                className="animate-in-up"
+                style={{
+                  marginBottom: 40,
+                  display: "flex",
+                  gap: 16,
+                  flexWrap: "wrap",
+                }}
+              >
+                <div
+                  className="glass-card"
+                  style={{
+                    flex: 1,
+                    minWidth: 200,
+                    padding: 20,
+                    borderLeft: "4px solid var(--emerald)",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 16,
+                  }}
+                >
+                  <div
+                    style={{
+                      width: 44,
+                      height: 44,
+                      borderRadius: 12,
+                      background: "rgba(16, 185, 129, 0.1)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    <ShieldCheck size={24} color="var(--emerald)" />
+                  </div>
+                  <div>
+                    <div
+                      style={{
+                        fontSize: 12,
+                        color: "var(--text-muted)",
+                        textTransform: "uppercase",
+                        fontWeight: 700,
+                      }}
+                    >
+                      Sensei's Accuracy (7D)
                     </div>
+                    <div
+                      style={{
+                        fontSize: 24,
+                        fontWeight: 900,
+                        color: "var(--emerald)",
+                      }}
+                    >
+                      {accuracyData.accuracy}%
+                    </div>
+                  </div>
                 </div>
-
-                {/* Controls & Search */}
-                <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    marginBottom: 24,
-                    flexWrap: 'wrap',
-                    gap: 16
-                }}>
-                    <div className="search-bar" style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 12,
-                        padding: '0 20px',
-                        background: 'var(--ninja-surface)',
-                        border: '1px solid var(--ninja-border)',
-                        borderRadius: 100,
-                        transition: 'all 0.2s ease',
-                        width: '100%',
-                        maxWidth: 400,
-                        height: 50,
-                        boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
-                    }}>
-                        <Search size={18} color="var(--text-muted)" />
-                        <input
-                            type="text"
-                            value={search}
-                            onChange={e => setSearch(e.target.value.toUpperCase())}
-                            placeholder="Filter by ticker symbol..."
-                            style={{
-                                flex: 1,
-                                background: 'transparent',
-                                border: 'none',
-                                color: 'var(--text-primary)',
-                                fontFamily: 'var(--font-mono)',
-                                fontSize: 15,
-                                outline: 'none',
-                            }}
-                        />
+                <div
+                  className="glass-card"
+                  style={{
+                    flex: 1,
+                    minWidth: 200,
+                    padding: 20,
+                    borderLeft: "4px solid var(--primary)",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 16,
+                  }}
+                >
+                  <div
+                    style={{
+                      width: 44,
+                      height: 44,
+                      borderRadius: 12,
+                      background: "rgba(14, 165, 233, 0.1)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    <Brain size={24} color="var(--primary)" />
+                  </div>
+                  <div>
+                    <div
+                      style={{
+                        fontSize: 12,
+                        color: "var(--text-muted)",
+                        textTransform: "uppercase",
+                        fontWeight: 700,
+                      }}
+                    >
+                      Intelligence Sample
                     </div>
-
-                    <div style={{ display: 'flex', gap: 12 }}>
-                        {!isPro && (
-                            <Link to="/pro" className="btn btn-amber shine-effect" style={{ padding: '0 24px' }}>
-                                <Crown size={16} /> Unlock Pro
-                            </Link>
-                        )}
-                        <button className="btn btn-secondary" onClick={fetchStocks} title="Refresh Data">
-                            <RefreshCw size={18} />
-                        </button>
+                    <div
+                      style={{
+                        fontSize: 24,
+                        fontWeight: 900,
+                        color: "var(--primary)",
+                      }}
+                    >
+                      {accuracyData.sample_size} Tickers
                     </div>
+                  </div>
                 </div>
-
-                {error ? (
-                    <div className="glass-card" style={{ textAlign: 'center', padding: 64 }}>
-                        <NinjaDojo width={120} height={120} style={{ opacity: 0.5, marginBottom: 24 }} />
-                        <h3 style={{ fontSize: 20, fontWeight: 700, marginBottom: 8 }}>System Offline</h3>
-                        <p style={{ color: 'var(--text-secondary)', marginBottom: 24 }}>{error}</p>
-                        <button className="btn btn-primary" onClick={fetchStocks}>Retry Connection</button>
-                    </div>
-                ) : (
-                    <>
-                        {/* Mobile List View */}
-                        <div className="mobile-only-block" style={{ display: 'none' }}>
-                            {sortedStocks().map((stock, i) => (
-                                <div key={i} style={{ animation: `fadeInUp 0.3s ease forwards`, animationDelay: `${i * 0.03}s`, opacity: 0 }}>
-                                    <MobileStockCard
-                                        stock={stock}
-                                        onClick={() => setSelectedTicker(stock.ticker)}
-                                    />
-                                </div>
-                            ))}
-                        </div>
-
-                        {/* Desktop Table */}
-                        <div className="glass-card desktop-only-block" style={{ padding: 0, overflow: 'hidden', border: '1px solid var(--ninja-border)' }}>
-                            <div className="table-scroll-wrapper">
-                                <table className="data-table">
-                                    <thead>
-                                        <tr>
-                                            <th onClick={() => toggleSort('ticker')} className="sortable-th">
-                                                Symbol <ArrowUpDown size={12} />
-                                            </th>
-                                            <th onClick={() => toggleSort('price')} className="sortable-th">
-                                                Current Price <ArrowUpDown size={12} />
-                                            </th>
-                                            <th onClick={() => toggleSort('volume')} className="sortable-th">
-                                                Activity <ArrowUpDown size={12} />
-                                            </th>
-                                            <th className="hide-mobile">Day High</th>
-                                            <th className="hide-mobile">Day Low</th>
-                                            <th onClick={() => toggleSort('changePct')} className="sortable-th">
-                                                Today <ArrowUpDown size={12} />
-                                            </th>
-                                            <th className="hide-mobile">Movement</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {sortedStocks().map((stock, i) => {
-                                            const range = stock.high - stock.low;
-                                            const rangePct = stock.low > 0 ? (range / stock.low * 100) : 0;
-                                            return (
-                                                <tr key={stock.ticker || i} style={{
-                                                    animation: `fadeInUp 0.3s ease forwards`,
-                                                    animationDelay: `${i * 0.03}s`,
-                                                    opacity: 0
-                                                }}>
-                                                    <td style={{ fontWeight: 700, fontFamily: 'var(--font-mono)' }}>
-                                                        <span
-                                                            onClick={() => setSelectedTicker(stock.ticker)}
-                                                            className="ticker-link"
-                                                            style={{
-                                                                cursor: 'pointer',
-                                                                display: 'inline-flex',
-                                                                alignItems: 'center',
-                                                                gap: 6,
-                                                                padding: '4px 8px',
-                                                                borderRadius: 6,
-                                                                transition: 'all 0.2s'
-                                                            }}
-                                                        >
-                                                            {stock.ticker} <ExternalLink size={12} style={{ opacity: 0.5 }} />
-                                                        </span>
-                                                    </td>
-                                                    <td style={{ fontFamily: 'var(--font-mono)' }}>
-                                                        ${stock.price?.toFixed(4)}
-                                                    </td>
-                                                    <td style={{ fontFamily: 'var(--font-mono)' }}>
-                                                        <span style={{
-                                                            color: stock.volume > 1000000 ? 'var(--emerald)' : 'inherit',
-                                                            fontWeight: stock.volume > 1000000 ? 700 : 400
-                                                        }}>
-                                                            {(stock.volume / 1000000).toFixed(2)}M
-                                                        </span>
-                                                    </td>
-                                                    <td className="hide-mobile" style={{ fontFamily: 'var(--font-mono)', color: 'var(--emerald)' }}>
-                                                        ${stock.high?.toFixed(4)}
-                                                    </td>
-                                                    <td className="hide-mobile" style={{ fontFamily: 'var(--font-mono)', color: 'var(--crimson)' }}>
-                                                        ${stock.low?.toFixed(4)}
-                                                    </td>
-                                                    <td style={{
-                                                        fontFamily: 'var(--font-mono)',
-                                                        fontWeight: 700,
-                                                        color: stock.changePct >= 0 ? 'var(--emerald)' : 'var(--crimson)'
-                                                    }}>
-                                                        {stock.changePct >= 0 ? '+' : ''}{stock.changePct}%
-                                                    </td>
-                                                    <td className="hide-mobile">
-                                                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                                            <div style={{
-                                                                flex: 1,
-                                                                height: 6,
-                                                                background: 'var(--ninja-surface)',
-                                                                borderRadius: 3,
-                                                                overflow: 'hidden',
-                                                                maxWidth: 100
-                                                            }}>
-                                                                <div style={{
-                                                                    width: `${Math.min(rangePct * 5, 100)}%`,
-                                                                    height: '100%',
-                                                                    background: `linear-gradient(90deg, var(--primary) 0%, ${rangePct > 10 ? 'var(--crimson)' : 'var(--primary)'} 100%)`,
-                                                                    borderRadius: 3,
-                                                                }} />
-                                                            </div>
-                                                            <span style={{ fontSize: 11, color: 'var(--text-muted)', width: 32 }}>
-                                                                {rangePct.toFixed(1)}%
-                                                            </span>
-                                                        </div>
-                                                    </td>
-                                                </tr>
-                                            );
-                                        })}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-
-                        {/* Pro Upsell - Now with Illustration */}
-                        {!isPro && (
-                            <div className="glass-card" style={{
-                                marginTop: 40,
-                                padding: 0,
-                                display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-                                overflow: 'hidden',
-                                border: '1px solid var(--primary)',
-                                boxShadow: '0 0 40px rgba(14, 165, 233, 0.15)'
-                            }}>
-                                <div style={{ padding: 40, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
-                                        <div style={{ padding: '6px 12px', background: 'rgba(245, 158, 11, 0.1)', borderRadius: 100, color: 'var(--amber)', fontSize: 12, fontWeight: 700, letterSpacing: 1 }}>
-                                            PRO FEATURE
-                                        </div>
-                                    </div>
-                                    <h3 style={{ fontSize: 32, fontWeight: 800, marginBottom: 12 }}>
-                                        See Tomorrow's <span className="text-gradient">Breakouts</span> Today
-                                    </h3>
-                                    <p style={{ color: 'var(--text-secondary)', fontSize: 16, lineHeight: 1.6, marginBottom: 24, maxWidth: 500 }}>
-                                        Our Pro Scanner uses AI to detect volume spikes before they hit the news.
-                                        Get real-time alerts, confidence scores, and unlimited scans.
-                                    </p>
-                                    <div>
-                                        <Link to="/pro" className="btn btn-primary btn-lg shine-effect">
-                                            <Zap size={18} /> Unlock Pro Scanner — Start Now
-                                        </Link>
-                                    </div>
-                                </div>
-                                <div style={{
-                                    background: 'linear-gradient(135deg, rgba(14, 165, 233, 0.1) 0%, rgba(15, 23, 42, 0.8) 100%)',
-                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                    position: 'relative'
-                                }}>
-                                    <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(circle at center, rgba(14, 165, 233, 0.2) 0%, transparent 70%)' }}></div>
-                                    <NinjaMaster width={220} height={220} style={{ filter: 'drop-shadow(0 10px 20px rgba(0,0,0,0.3))' }} />
-                                </div>
-                            </div>
-                        )}
-                    </>
-                )}
-            </div>
-
-            {selectedTicker && (
-                <StockDetailModal
-                    ticker={selectedTicker}
-                    onClose={() => setSelectedTicker(null)}
-                />
+              </div>
             )}
 
-            <style>{`
-                @keyframes fadeInUp {
-                    from { opacity: 0; transform: translateY(10px); }
-                    to { opacity: 1; transform: translateY(0); }
+            {/* Top Picks Section */}
+            {topPicks.length > 0 && (
+              <div style={{ marginBottom: 48 }}>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 12,
+                    marginBottom: 24,
+                  }}
+                >
+                  <div
+                    style={{
+                      width: 32,
+                      height: 32,
+                      borderRadius: 8,
+                      background: "rgba(245, 158, 11, 0.15)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      border: "1px solid rgba(245, 158, 11, 0.3)",
+                    }}
+                  >
+                    <Crown size={18} color="var(--amber)" fill="var(--amber)" />
+                  </div>
+                  <h2 style={{ fontSize: 22, fontWeight: 800 }}>
+                    High-Probability Targets
+                  </h2>
+                </div>
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
+                    gap: 24,
+                  }}
+                >
+                  {topPicks.map((pick, i) => (
+                    <div
+                      key={i}
+                      className="glass-card moonshot-card"
+                      style={{
+                        padding: 0,
+                        overflow: "hidden",
+                        border: "1px solid rgba(14, 165, 233, 0.2)",
+                        background:
+                          "linear-gradient(135deg, rgba(15, 23, 42, 0.8) 0%, rgba(5, 5, 16, 0.95) 100%)",
+                        display: "flex",
+                        flexDirection: "column",
+                        height: "100%",
+                      }}
+                    >
+                      <div
+                        style={{
+                          padding: 24,
+                          flex: 1,
+                          display: "flex",
+                          flexDirection: "column",
+                          justifyContent: "space-between",
+                        }}
+                      >
+                        <div style={{ marginBottom: 20 }}>
+                          <div>
+                            <h3
+                              style={{
+                                fontSize: 32,
+                                fontWeight: 900,
+                                letterSpacing: "-1px",
+                              }}
+                            >
+                              {pick.ticker}
+                            </h3>
+                            <div
+                              style={{
+                                fontSize: 13,
+                                color: "var(--primary)",
+                                fontWeight: 700,
+                                fontFamily: "monospace",
+                                textTransform: "uppercase",
+                                marginTop: 4,
+                              }}
+                            >
+                              CONFIDENCE SCORE: {pick.score * 20}%
+                            </div>
+                          </div>
+                          <div style={{ textAlign: "right" }}>
+                            <div style={{ fontSize: 24, fontWeight: 800 }}>
+                              ${pick.price || pick.latest?.Close?.toFixed(3)}
+                            </div>
+                            <div
+                              style={{
+                                color: "var(--emerald)",
+                                fontWeight: 700,
+                                fontSize: 14,
+                              }}
+                            >
+                              {pick.changePct > 0 ? "+" : ""}
+                              {pick.changePct ||
+                                pick.latest?.change_pct?.toFixed(2)}
+                              %
+                            </div>
+                          </div>
+                        </div>
+
+                        <div
+                          style={{
+                            marginBottom: 20,
+                            display: "flex",
+                            flexWrap: "wrap",
+                            gap: 8,
+                          }}
+                        >
+                          {pick.signals?.map((sig, j) => (
+                            <span
+                              key={j}
+                              className="badge badge-primary"
+                              style={{ fontSize: 11, padding: "4px 10px" }}
+                            >
+                              {sig}
+                            </span>
+                          ))}
+                        </div>
+                        <div
+                          style={{
+                            padding: 12,
+                            borderRadius: 10,
+                            background: "rgba(0,0,0,0.3)",
+                            border: "1px solid rgba(255,255,255,0.05)",
+                            marginBottom: 20,
+                          }}
+                        >
+                          <div
+                            style={{
+                              fontSize: 11,
+                              color: "var(--text-muted)",
+                              marginBottom: 4,
+                            }}
+                          >
+                            Sensei's Predicted Strike:
+                          </div>
+                          <div
+                            style={{
+                              fontSize: 18,
+                              fontWeight: 900,
+                              color: "var(--sky)",
+                            }}
+                          >
+                            ${(pick.price * 1.2).toFixed(3)}
+                          </div>
+                        </div>
+
+                        <button
+                          className="btn btn-secondary"
+                          style={{ width: "100%", height: 48, fontWeight: 700 }}
+                          onClick={() => setSelectedTicker(pick.ticker)}
+                        >
+                          View Intelligence Scroll
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Full Results Table */}
+            <div
+              className="glass-card"
+              style={{
+                padding: 0,
+                overflow: "hidden",
+                border: "1px solid var(--ninja-border)",
+                borderRadius: 20,
+              }}
+            >
+              <div
+                style={{
+                  padding: "20px 24px",
+                  borderBottom: "1px solid var(--ninja-border)",
+                  background: "rgba(255,255,255,0.02)",
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                }}
+              >
+                <h3 style={{ fontSize: 17, fontWeight: 700 }}>
+                  Sector Signals{" "}
+                  <span
+                    style={{
+                      color: "var(--text-muted)",
+                      fontSize: 14,
+                      fontWeight: 400,
+                    }}
+                  >
+                    ({stocks.length} Analyzed)
+                  </span>
+                </h3>
+                <Filter size={16} color="var(--text-muted)" />
+              </div>
+              <div className="table-scroll-wrapper">
+                <table className="data-table">
+                  <thead>
+                    <tr>
+                      <th>Symbol</th>
+                      <th>Current Price</th>
+                      <th>Trend Flow</th>
+                      <th>AI Signal</th>
+                      <th>Potential</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {stocks.map((stock, i) => (
+                      <tr
+                        key={i}
+                        onClick={() => setSelectedTicker(stock.ticker)}
+                        style={{ cursor: "pointer" }}
+                      >
+                        <td
+                          style={{
+                            fontWeight: 800,
+                            color: "white",
+                            fontSize: 16,
+                          }}
+                        >
+                          {stock.ticker}
+                        </td>
+                        <td>
+                          <div style={{ fontWeight: 600 }}>
+                            ${stock.price || stock.latest?.Close?.toFixed(3)}
+                          </div>
+                          <div
+                            style={{
+                              fontSize: 11,
+                              color:
+                                stock.changePct >= 0
+                                  ? "var(--emerald)"
+                                  : "var(--crimson)",
+                            }}
+                          >
+                            {stock.changePct >= 0 ? "+" : ""}
+                            {stock.changePct ||
+                              stock.latest?.change_pct?.toFixed(2)}
+                            %
+                          </div>
+                        </td>
+                        <td>
+                          <div
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 8,
+                            }}
+                          >
+                            <div
+                              style={{
+                                width: 8,
+                                height: 8,
+                                borderRadius: "50%",
+                                background:
+                                  stock.score >= 3
+                                    ? "var(--emerald)"
+                                    : "var(--amber)",
+                              }}
+                            />
+                            <span style={{ fontSize: 13, fontWeight: 600 }}>
+                              {stock.score >= 4
+                                ? "Bullish Force"
+                                : stock.score >= 3
+                                  ? "Consolidating"
+                                  : "Weak Signal"}
+                            </span>
+                          </div>
+                        </td>
+                        <td>
+                          <div
+                            style={{
+                              fontSize: 13,
+                              color: "var(--text-secondary)",
+                            }}
+                          >
+                            {stock.signals?.[0] || "Technical Breakout"}
+                          </div>
+                        </td>
+                        <td>
+                          <div
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 6,
+                            }}
+                          >
+                            <div
+                              style={{
+                                flex: 1,
+                                height: 4,
+                                background: "rgba(255,255,255,0.05)",
+                                borderRadius: 2,
+                              }}
+                            >
+                              <div
+                                style={{
+                                  width: `${stock.score * 20}%`,
+                                  height: "100%",
+                                  background: "var(--primary)",
+                                  borderRadius: 2,
+                                }}
+                              />
+                            </div>
+                            <span style={{ fontSize: 12, fontWeight: 800 }}>
+                              {stock.score * 20}%
+                            </span>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              {stocks.length === 0 && !loading && (
+                <div
+                  style={{
+                    padding: 60,
+                    textAlign: "center",
+                    color: "var(--text-muted)",
+                  }}
+                >
+                  No elite signals detected in this sector. Try another?
+                </div>
+              )}
+            </div>
+          </>
+        )}
+      </div>
+
+      {
+        selectedTicker && (
+          <StockDetailModal
+            ticker={selectedTicker}
+            onClose={() => setSelectedTicker(null)}
+          />
+        )
+      }
+
+      <style>{`
+                @keyframes flicker {
+                    0% { opacity: 0.8; }
+                    50% { opacity: 1; }
+                    100% { opacity: 0.9; }
                 }
-                .sortable-th { cursor: pointer; transition: color 0.2s; }
-                .sortable-th:hover { color: var(--primary); }
+                .radar-pulse { width: 8px; height: 8px; background: var(--success); border-radius: 50%; box-shadow: 0 0 10px var(--success); animation: pulse 2s infinite; }
+                @keyframes pulse { 0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); } 70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); } 100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); } }
                 
-                .ticker-link:hover { background: rgba(14, 165, 233, 0.1); color: var(--primary); }
+                .sector-chip:hover { transform: translateY(-2px); border-color: rgba(255,255,255,0.3) !important; background: rgba(255,255,255,0.05) !important; }
+                .sector-chip.active:hover { background: rgba(14, 165, 233, 0.15) !important; border-color: var(--primary) !important; }
                 
-                .illustration-float { animation: float 6s ease-in-out infinite; }
-                @keyframes float {
-                    0%, 100% { transform: translateY(0); }
-                    50% { transform: translateY(-15px); }
-                }
+                #market-overview-page .moonshot-card:hover { transform: translateY(-4px); border-color: var(--primary) !important; box-shadow: 0 20px 40px -10px rgba(14, 165, 233, 0.2); }
                 
                 @media (max-width: 768px) {
-                    .glass-card { grid-template-columns: 1fr !important; }
-                    .illustration-float svg { width: 80px !important; height: 80px !important; }
-                    h1 { flex-wrap: wrap !important; font-size: 28px !important; }
-                    
-                    .desktop-only-block { display: none !important; }
-                    .mobile-only-block { display: block !important; }
+                    h1 { font-size: 32px !important; }
                 }
             `}</style>
-        </div>
-    );
+    </div >
+  );
 }

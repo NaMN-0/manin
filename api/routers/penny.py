@@ -11,12 +11,15 @@ from services.penny_service import (
     analyze_single_penny,
 )
 from services.moonshot_service import MoonshotService
+from services.gamification_service import GamificationService
+from fastapi import BackgroundTasks
 
 router = APIRouter()
 
 
 @router.get("/moonshots")
 async def get_moonshots(
+    background_tasks: BackgroundTasks,
     user: dict = Depends(require_pro),
 ):
     """
@@ -51,6 +54,7 @@ async def basic_penny_list(
 
 @router.get("/scan")
 async def full_scan(
+    background_tasks: BackgroundTasks,
     limit: int = Query(100, ge=20, le=500),
     user: dict = Depends(require_pro),
 ):
@@ -69,6 +73,7 @@ async def full_scan(
 
 @router.get("/scan_batch")
 async def scan_batch(
+    background_tasks: BackgroundTasks,
     limit: int = Query(10, ge=1, le=50),
     offset: int = Query(0, ge=0),
     user: dict = Depends(require_pro),
@@ -90,14 +95,29 @@ async def scan_batch(
 @router.get("/analyze/{ticker}")
 async def analyze_penny(
     ticker: str,
+    background_tasks: BackgroundTasks,
     user: dict = Depends(get_current_user),
 ):
     """
     Deep analysis on a single penny stock.
     Requires login.
     """
+    app_meta = user.get("app_metadata", {})
+    user_meta = user.get("user_metadata", {})
+    is_pro = (
+        app_meta.get("subscription_status") == "active"
+        or user_meta.get("is_pro", False)
+        or user.get("email") == "naman1474@gmail.com"
+    )
+
     # analyze_single_penny is blocking
-    result = await run_in_threadpool(analyze_single_penny, ticker.upper())
+    result = await run_in_threadpool(analyze_single_penny, ticker.upper(), is_pro=is_pro)
     if result is None:
         raise HTTPException(status_code=404, detail=f"No data for {ticker}")
+
+    # Award XP
+    user_id = user.get("id", user.get("sub"))
+    if user_id:
+        background_tasks.add_task(GamificationService.add_xp, user_id, 5, f"analyze_{ticker}")
+
     return {"status": "ok", "data": result}

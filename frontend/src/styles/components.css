@@ -1,0 +1,236 @@
+/* ─── Glass Card ─────────────────────────────────────────────────────────── */
+.glass-card {
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  transition: all 0.3s ease;
+}
+
+.glass-card:hover {
+  border-color: var(--primary-glow);
+  box-shadow: var(--shadow-primary);
+  transform: translateY(-2px);
+}
+
+/* ─── Buttons ────────────────────────────────────────────────────────────── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 24px;
+  border: none;
+  border-radius: var(--radius-md);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.btn-primary {
+  background: var(--gradient-primary);
+  color: white;
+  box-shadow: 0 4px 16px rgba(14, 165, 233, 0.3);
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(14, 165, 233, 0.4);
+}
+
+.btn-secondary {
+  background: var(--ninja-surface);
+  color: var(--text-primary);
+  border: 1px solid var(--ninja-border);
+}
+
+.btn-secondary:hover {
+  background: var(--ninja-surface-hover);
+  border-color: var(--primary);
+}
+
+.btn-amber {
+  background: var(--gradient-amber);
+  color: var(--ninja-black);
+  box-shadow: 0 4px 16px rgba(245, 158, 11, 0.3);
+}
+
+.btn-amber:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(245, 158, 11, 0.4);
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--text-secondary);
+  padding: 8px 16px;
+}
+
+.btn-ghost:hover {
+  color: var(--text-primary);
+  background: var(--ninja-surface);
+}
+
+.btn-lg {
+  padding: 16px 32px;
+  font-size: 16px;
+  border-radius: var(--radius-lg);
+}
+
+/* ─── Data Table ─────────────────────────────────────────────────────────── */
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.data-table th {
+  text-align: left;
+  padding: 12px 16px;
+  font-weight: 600;
+  color: var(--text-muted);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid var(--ninja-border);
+}
+
+.data-table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid rgba(42, 42, 58, 0.5);
+  color: var(--text-secondary);
+}
+
+.data-table tr:hover td {
+  background: var(--ninja-surface-hover);
+  color: var(--text-primary);
+}
+
+/* ─── Badges ─────────────────────────────────────────────────────────────── */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 100px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.badge-green {
+  background: rgba(16, 185, 129, 0.15);
+  color: var(--emerald-glow);
+}
+
+.badge-red {
+  background: rgba(220, 38, 38, 0.15);
+  color: var(--crimson-glow);
+}
+
+.badge-amber {
+  background: rgba(245, 158, 11, 0.15);
+  color: var(--amber-glow);
+}
+
+.badge-pro {
+  background: var(--gradient-amber);
+  color: var(--ninja-black);
+  font-weight: 700;
+}
+
+/* ─── Metric Card ────────────────────────────────────────────────────────── */
+.metric-card {
+  background: var(--gradient-card);
+  border: 1px solid var(--ninja-border);
+  border-radius: var(--radius-md);
+  padding: 20px;
+}
+
+.metric-card .label {
+  font-size: 12px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 8px;
+}
+
+.metric-card .value {
+  font-size: 28px;
+  font-weight: 800;
+  font-family: var(--font-mono);
+}
+
+/* ─── Pro Blur Lock ──────────────────────────────────────────────────────── */
+.pro-locked {
+  position: relative;
+  overflow: hidden;
+}
+
+.pro-locked::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  backdrop-filter: blur(8px);
+  background: rgba(10, 10, 15, 0.6);
+  z-index: 10;
+}
+
+.pro-locked-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 20;
+  gap: 16px;
+}
+
+/* ─── Hover Guard (touch devices) ────────────────────────────────────────── */
+@media (hover: none) {
+  .glass-card:hover {
+    transform: none;
+    border-color: var(--glass-border);
+    box-shadow: none;
+  }
+}
+
+/* ─── Responsive Component Tweaks ────────────────────────────────────────── */
+@media (max-width: 768px) {
+  /* Cards */
+  .glass-card {
+    padding: 16px;
+    border-radius: 12px;
+  }
+
+  .metric-card {
+    padding: 14px;
+  }
+
+  .metric-card .value {
+    font-size: 22px;
+  }
+
+  /* Buttons */
+  .btn-lg {
+    padding: 14px 20px;
+    font-size: 14px;
+  }
+
+  /* Tables */
+  .data-table {
+    font-size: 13px;
+  }
+
+  .data-table th,
+  .data-table td {
+    padding: 10px 12px;
+    white-space: nowrap;
+  }
+}

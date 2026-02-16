@@ -1,453 +1,879 @@
-
-
-import { useEffect, useState } from 'react';
-import api from '../lib/api';
-import StockCard from '../components/StockCard';
-import MobileStockCard from '../components/MobileStockCard';
-import FeaturePreviewCard from '../components/FeaturePreviewCard';
+import { useEffect, useState, useMemo } from "react";
+import { marketApi } from "../api/market"; // Use the new marketApi
+import client from "../api/client"; // Use the new API client for meta
+import StockCard from "../components/StockCard";
+// import MobileStockCard from "../components/MobileStockCard"; // Removed unused import
+import FeaturePreviewCard from "../components/FeaturePreviewCard";
 import {
-    TrendingUp, TrendingDown, Activity, BarChart3, RefreshCw, Clock, Search, AlertTriangle, Check, ExternalLink
-} from 'lucide-react';
-import { useAuth } from '../context/AuthContext';
-import { Link } from 'react-router-dom';
-import NinjaTrainingLoader from '../components/NinjaTrainingLoader';
-import { NinjaCharting, NinjaMeditating, NinjaVictory, NinjaDojo } from '../components/NinjaIllustrations';
-import StockDetailModal from '../components/StockDetailModal';
+  TrendingUp,
+  TrendingDown,
+  Activity,
+  RefreshCw,
+  Clock,
+  Search,
+  ExternalLink,
+  Zap,
+  Shield,
+  Target,
+  Crown,
+} from "lucide-react";
+import { useAuth } from "../context/AuthContext";
+import { useGame } from "../context/GameContext";
+import { Link } from "react-router-dom";
+import NinjaTrainingLoader from "../components/NinjaTrainingLoader";
 import {
-    AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer
-} from 'recharts';
+  NinjaCharting,
+  NinjaMeditating,
+  NinjaVictory,
+  NinjaChaos, // Import NinjaChaos
+} from "../components/NinjaIllustrations";
+import StockDetailModal from "../components/StockDetailModal";
+import { AreaChart, Area, Tooltip, ResponsiveContainer } from "recharts";
+import ProModal from "../components/ProModal";
 
-import { usePostHog } from 'posthog-js/react';
+import { usePostHog } from "posthog-js/react";
 
 export default function MarketOverview() {
-    const { user } = useAuth();
-    const [data, setData] = useState(null);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
-    const [tickerSearch, setTickerSearch] = useState('');
-    const [tickerResult, setTickerResult] = useState(null);
-    const [analyzing, setAnalyzing] = useState(false);
-    const [selectedTicker, setSelectedTicker] = useState(null);
-    const [meta, setMeta] = useState({});
-    const posthog = usePostHog();
+  const { user } = useAuth();
+  const { addXp } = useGame();
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  // const [error, setError] = useState(null); // Removed unused state
+  const [tickerSearch, setTickerSearch] = useState("");
+  const [tickerResult, setTickerResult] = useState(null);
+  const [analyzing, setAnalyzing] = useState(false);
+  const [selectedTicker, setSelectedTicker] = useState(null);
+  const [meta, setMeta] = useState({});
+  const posthog = usePostHog();
 
-    useEffect(() => {
-        posthog?.capture('viewed_market_overview');
-        fetchOverview();
-        fetchMeta();
-    }, [posthog]);
+  useEffect(() => {
+    posthog?.capture("viewed_market_overview");
+    fetchOverview();
+    fetchMeta();
+  }, [posthog]);
 
-    async function fetchMeta() {
-        try {
-            const res = await api.get('/meta');
-            if (res.data?.status === 'ok') {
-                const metaMap = {};
-                res.data.data.forEach(item => {
-                    metaMap[item.key] = item.value_int;
-                });
-                setMeta(metaMap);
-            }
-        } catch (err) {
-            console.error('Failed to fetch meta:', err);
-        }
+  async function fetchMeta() {
+    try {
+      const res = await client.get("/api/meta");
+      if (res.data?.status === "ok") {
+        const metaMap = {};
+        res.data.data.forEach((item) => {
+          metaMap[item.key] = item.value_int;
+        });
+        setMeta(metaMap);
+      }
+    } catch {
+      // ignore
+    }
+  }
+
+  async function handleFeatureVote(key) {
+    try {
+      const res = await client.post(`/api/meta/increment/${key}`);
+      if (res.data?.status === "ok") {
+        setMeta((prev) => ({
+          ...prev,
+          [key]: res.data.newValue,
+        }));
+        addXp(2, `Voted for Arsenal Upgrade: ${key.replace("votes_", "")}`);
+      }
+    } catch (_error) {
+      // Changed 'err' to '_error' to mark as unused
+      console.error("Failed to increment vote:", _error);
+    }
+  }
+
+  async function fetchOverview() {
+    setLoading(true);
+    // setError(null); // Removed unused state setter
+    try {
+      const data = await marketApi.getOverview();
+      setData(data);
+    } catch {
+      // ignore
+    }
+    setLoading(false);
+  }
+
+  async function loadSenseiAnalysis(ticker) {
+    setAnalyzing(true);
+    setTickerResult(null);
+    try {
+      const data = await marketApi.getSenseiAnalysis(ticker);
+      setTickerResult(data);
+      addXp(10, `Intelligence Gathered: ${ticker}`);
+    } catch {
+      setTickerResult({ error: true });
+    }
+    setAnalyzing(false);
+  }
+
+  async function analyzeTicker() {
+    if (!tickerSearch.trim()) return;
+
+    // Start trial if not already active or used
+    if (!trialActive && trialTimeLeft > 0) {
+      setTrialActive(true);
     }
 
-    async function handleFeatureVote(key) {
-        try {
-            const res = await api.post(`/meta/increment/${key}`);
-            if (res.data?.status === 'ok') {
-                setMeta(prev => ({
-                    ...prev,
-                    [key]: res.data.newValue
-                }));
-            }
-        } catch (err) {
-            console.error('Failed to increment vote:', err);
-        }
+    if (trialTimeLeft <= 0) {
+      setShowProModal(true);
+      return;
     }
 
-    async function fetchOverview() {
-        setLoading(true);
-        setError(null);
-        try {
-            const res = await api.get('/market/overview');
-            setData(res.data.data);
-        } catch (err) {
-            setError('Failed to fetch market data. Is the API server running?');
-        }
-        setLoading(false);
-    }
+    const ticker = tickerSearch.trim().toUpperCase();
+    posthog?.capture("clicked_analyze_ticker", { ticker });
+    await loadSenseiAnalysis(ticker);
+  }
 
-    async function analyzeTicker() {
-        if (!tickerSearch.trim()) return;
-        posthog?.capture('clicked_analyze_ticker', { ticker: tickerSearch.trim().toUpperCase() });
-        setAnalyzing(true);
-        setTickerResult(null);
-        try {
-            const res = await api.get(`/market/analyze/${tickerSearch.trim().toUpperCase()}`);
-            setTickerResult(res.data.data);
-        } catch {
-            setTickerResult({ error: true });
-        }
-        setAnalyzing(false);
-    }
+  const marketPowerLevel = useMemo(() => {
+    if (!data || !data.indices) return 0;
+    const upCount = data.indices.filter((idx) => idx.changePct >= 0).length;
+    return Math.min(100, (upCount / data.indices.length) * 100);
+  }, [data]);
 
-    if (loading) {
-        return (
-            <div className="page" style={{
-                minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', paddingTop: 80
-            }}>
-                <NinjaTrainingLoader text="Scanning Markets..." />
-            </div>
-        );
-    }
+  /* Trial Logic */
+  const [trialTimeLeft, setTrialTimeLeft] = useState(30);
+  const [trialActive, setTrialActive] = useState(false);
+  const [showProModal, setShowProModal] = useState(false);
 
-    if (error) {
-        return (
-            <div className="page" style={{ padding: '120px 0' }}>
-                <div className="container" style={{ textAlign: 'center' }}>
-                    <div style={{ marginBottom: 24, opacity: 0.5 }}>
-                        <NinjaDojo width={150} height={150} />
-                    </div>
-                    <h2 style={{ marginBottom: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12 }}>
-                        <AlertTriangle size={32} color="var(--amber)" /> Connection Error
-                    </h2>
-                    <p style={{ color: 'var(--text-secondary)', marginBottom: 24 }}>{error}</p>
-                    <button className="btn btn-primary" onClick={fetchOverview}>
-                        <RefreshCw size={16} /> Retry
-                    </button>
-                </div>
-            </div>
-        );
+  useEffect(() => {
+    let timer;
+    if (trialActive && trialTimeLeft > 0) {
+      timer = setInterval(() => {
+        setTrialTimeLeft((prev) => {
+          if (prev <= 1) {
+            setTrialActive(false);
+            setShowProModal(true);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
     }
+    return () => clearInterval(timer);
+  }, [trialActive, trialTimeLeft]);
 
+  if (loading) {
     return (
-        <div id="market-overview-page" className="page" style={{ paddingBottom: 80 }}>
-            {/* Ambient Background */}
-            <div style={{ position: 'fixed', top: '10%', right: '-15%', opacity: 0.03, pointerEvents: 'none', zIndex: 0 }}>
-                <NinjaCharting width={600} height={600} />
+      <div
+        className="page"
+        style={{
+          minHeight: "100vh",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          paddingTop: 80,
+        }}
+      >
+        <NinjaTrainingLoader text="Scanning Global Battlefronts..." />
+      </div>
+    );
+  }
+
+  return (
+    <div
+      id="market-overview-page"
+      className="page"
+      style={{ paddingBottom: 80 }}
+    >
+      <ProModal isOpen={showProModal} />
+      {/* Ambient Background */}
+      <div
+        style={{
+          position: "fixed",
+          top: "10%",
+          right: "-15%",
+          opacity: 0.03,
+          pointerEvents: "none",
+          zIndex: 0,
+        }}
+      >
+        <NinjaCharting width={600} height={600} />
+      </div>
+
+      <div className="container" style={{ position: "relative", zIndex: 1 }}>
+        {/* Header */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            marginBottom: 32,
+            paddingTop: 24,
+            flexWrap: "wrap",
+            gap: 16,
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
+            <div
+              style={{
+                width: 80,
+                height: 80,
+                background: "var(--gradient-card)",
+                borderRadius: "24px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                border: "1px solid var(--ninja-border)",
+                boxShadow: "0 12px 32px rgba(0,0,0,0.3)",
+                position: "relative",
+                overflow: "hidden",
+              }}
+            >
+              <div
+                style={{ animation: "spin 20s linear infinite", opacity: 0.8 }}
+              >
+                <NinjaCharting width={60} height={60} />
+              </div>
             </div>
-
-            <div className="container" style={{ position: 'relative', zIndex: 1 }}>
-                {/* Header */}
-                <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    marginBottom: 32,
-                    paddingTop: 24,
-                    flexWrap: 'wrap',
-                    gap: 16,
-                }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
-                        <div style={{
-                            width: 80, height: 80,
-                            background: 'var(--gradient-card)',
-                            borderRadius: '24px',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            border: '1px solid var(--ninja-border)',
-                            boxShadow: '0 12px 32px rgba(0,0,0,0.3)',
-                            position: 'relative',
-                            overflow: 'hidden'
-                        }}>
-                            <div style={{ animation: 'spin 20s linear infinite', opacity: 0.8 }}>
-                                <NinjaCharting width={60} height={60} />
-                            </div>
-                        </div>
-                        <div>
-                            <h1 style={{ fontSize: 36, fontWeight: 900, marginBottom: 4, letterSpacing: '-0.02em' }}>
-                                Market <span className="text-gradient">Overview</span>
-                            </h1>
-                            <p style={{ color: 'var(--text-muted)', fontSize: 15 }}>
-                                Live tracking of US Indices & Top Market Movers
-                            </p>
-                        </div>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                        {!user && (
-                            <Link to="/" className="btn btn-secondary" style={{ marginRight: 8 }}>
-                                <ExternalLink size={16} /> Home
-                            </Link>
-                        )}
-                        <span className={`badge ${data?.marketOpen ? 'badge-green' : 'badge-red'} shine-effect`} style={{ height: 36, padding: '0 16px', fontSize: 14 }}>
-                            <Activity size={16} />
-                            {data?.marketOpen ? 'Market Open' : 'Market Closed'}
-                        </span>
-                        <button className="btn btn-ghost" onClick={fetchOverview} title="Refresh Data">
-                            <RefreshCw size={18} />
-                        </button>
-                    </div>
-                </div>
-
-                {/* Index Cards */}
-                <div style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
-                    gap: 20,
-                    marginBottom: 48,
-                }}>
-                    {data?.indices?.map((idx, i) => (
-                        <div key={i} className="glass-card animate-in-up"
-                            style={{
-                                animationDelay: `${i * 0.1}s`,
-                                padding: 24,
-                                borderTop: idx.changePct >= 0 ? '3px solid var(--emerald)' : '3px solid var(--crimson)'
-                            }}>
-                            <div className="label" style={{ fontSize: 14, marginBottom: 8, opacity: 0.7 }}>{idx.name}</div>
-                            <div className="value" style={{ fontSize: 28, fontWeight: 800 }}>
-                                {idx.price?.toLocaleString()}
-                            </div>
-                            <div style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: 6,
-                                marginTop: 12,
-                                color: idx.changePct >= 0 ? 'var(--emerald-glow)' : 'var(--crimson-glow)',
-                                fontWeight: 700,
-                                fontSize: 15,
-                            }}>
-                                {idx.changePct >= 0 ? <TrendingUp size={16} /> : <TrendingDown size={16} />}
-                                {idx.changePct >= 0 ? '+' : ''}{idx.changePct}%
-                                <span style={{ color: 'var(--text-muted)', fontWeight: 400, fontSize: 13, marginLeft: 4 }}>
-                                    ({idx.change >= 0 ? '+' : ''}{idx.change})
-                                </span>
-                            </div>
-                        </div>
-                    ))}
-                </div>
-
-                {/* Ticker Search Analysis */}
-                <div className="glass-card search-card" style={{ marginBottom: 48, padding: 0, overflow: 'hidden', border: '1px solid var(--ninja-border)' }}>
-                    <div style={{ borderBottom: '1px solid var(--ninja-border)', padding: ' clamp(16px, 4vw, 24px)', background: 'rgba(255,255,255,0.02)' }}>
-                        <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 16 }}>
-                            <Search size={18} style={{ verticalAlign: 'middle', marginRight: 8, color: 'var(--primary)' }} />
-                            Quick Market Scan
-                        </h3>
-                        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-                            <input
-                                type="text"
-                                value={tickerSearch}
-                                onChange={e => setTickerSearch(e.target.value.toUpperCase())}
-                                onKeyDown={e => e.key === 'Enter' && analyzeTicker()}
-                                placeholder="Enter Symbol (e.g. AAPL, NVDA, TSLA)..."
-                                style={{
-                                    flex: '1 1 200px',
-                                    padding: '12px 16px',
-                                    background: 'var(--ninja-surface)',
-                                    border: '1px solid var(--ninja-border)',
-                                    borderRadius: 'var(--radius-md)',
-                                    color: 'var(--text-primary)',
-                                    fontFamily: 'var(--font-mono)',
-                                    fontSize: 16,
-                                    outline: 'none',
-                                    transition: 'border 0.2s',
-                                }}
-                                onFocus={e => e.target.style.borderColor = 'var(--primary)'}
-                                onBlur={e => e.target.style.borderColor = 'var(--ninja-border)'}
-                            />
-                            <button className="btn btn-primary" onClick={analyzeTicker} disabled={analyzing} style={{ flex: '1 1 120px' }}>
-                                {analyzing ? 'Scanning...' : 'Scan Now'}
-                            </button>
-                        </div>
-                    </div>
-
-                    {tickerResult && !tickerResult.error && (
-                        <div style={{ padding: 32, animation: 'fadeIn 0.5s ease' }}>
-                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 32, alignItems: 'start' }}>
-                                {/* Left: Metrics */}
-                                <div style={{ flex: 1, minWidth: 250 }}>
-                                    <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, marginBottom: 24 }}>
-                                        <h2 style={{ fontSize: 32, fontWeight: 900 }}>{tickerResult.ticker}</h2>
-                                        <span style={{ fontSize: 24, fontFamily: 'var(--font-mono)' }}>${tickerResult.price}</span>
-                                        <span style={{
-                                            fontSize: 18, fontWeight: 600,
-                                            color: tickerResult.changePct >= 0 ? 'var(--emerald)' : 'var(--crimson)'
-                                        }}>
-                                            {tickerResult.changePct >= 0 ? '+' : ''}{tickerResult.changePct}%
-                                        </span>
-                                    </div>
-
-                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 24 }}>
-                                        <div className="metric-box">
-                                            <div className="metric-label">Momentum Score</div>
-                                            <div className="metric-value" style={{ color: tickerResult.rsi > 70 ? 'var(--crimson)' : tickerResult.rsi < 30 ? 'var(--emerald)' : 'inherit' }}>
-                                                {tickerResult.rsi.toFixed(1)}
-                                            </div>
-                                        </div>
-                                        <div className="metric-box">
-                                            <div className="metric-label">Trend Direction</div>
-                                            <div className="metric-value">{tickerResult.macd > 0 ? 'Bullish' : 'Bearish'} Flow</div>
-                                        </div>
-                                    </div>
-
-                                    <div style={{ marginBottom: 24 }}>
-                                        <div className={`verdict-badge ${tickerResult.verdict.replace(' ', '-').toLowerCase()}`}>
-                                            {tickerResult.verdict}
-                                        </div>
-                                    </div>
-
-                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                                        {tickerResult.signals?.map((sig, i) => (
-                                            <span key={i} className="badge badge-green" style={{ fontSize: 12, padding: '6px 12px', borderRadius: 20 }}>
-                                                <Check size={12} /> {sig}
-                                            </span>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                {/* Right: Chart & Mascot */}
-                                <div style={{ flex: 1.5, minWidth: 300, position: 'relative' }}>
-                                    {/* Mascot Reaction */}
-                                    <div style={{ position: 'absolute', top: -20, right: 0, zIndex: 10, animation: 'popIn 0.5s cubic-bezier(0.19, 1, 0.22, 1)' }}>
-                                        {tickerResult.verdict === 'STRONG BUY' ? (
-                                            <NinjaVictory width={120} height={120} />
-                                        ) : (
-                                            <NinjaMeditating width={100} height={100} />
-                                        )}
-                                    </div>
-
-                                    <div style={{ height: 250, background: 'rgba(0,0,0,0.2)', borderRadius: 16, padding: 16, border: '1px solid var(--ninja-border)' }}>
-                                        <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
-                                            <Activity size={14} /> PRICE MOVEMENT (LATEST TREND)
-                                        </div>
-                                        <ResponsiveContainer width="100%" height="100%">
-                                            <AreaChart data={tickerResult.priceHistory}>
-                                                <defs>
-                                                    <linearGradient id="chartFill" x1="0" y1="0" x2="0" y2="1">
-                                                        <stop offset="0%" stopColor={tickerResult.changePct >= 0 ? "var(--emerald)" : "var(--crimson)"} stopOpacity={0.3} />
-                                                        <stop offset="100%" stopColor={tickerResult.changePct >= 0 ? "var(--emerald)" : "var(--crimson)"} stopOpacity={0} />
-                                                    </linearGradient>
-                                                </defs>
-                                                <Tooltip
-                                                    contentStyle={{
-                                                        background: 'var(--ninja-surface)',
-                                                        border: '1px solid var(--ninja-border)',
-                                                        borderRadius: 8,
-                                                        color: 'var(--text-primary)',
-                                                        fontSize: 13,
-                                                    }}
-                                                />
-                                                <Area
-                                                    type="monotone"
-                                                    dataKey="close"
-                                                    stroke={tickerResult.changePct >= 0 ? "var(--emerald)" : "var(--crimson)"}
-                                                    fill="url(#chartFill)"
-                                                    strokeWidth={2}
-                                                />
-                                            </AreaChart>
-                                        </ResponsiveContainer>
-                                    </div>
-                                    <div style={{ textAlign: 'right', marginTop: 8 }}>
-                                        <a
-                                            href={`https://finance.yahoo.com/quote/${tickerResult.ticker}`}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            style={{ fontSize: 12, color: 'var(--text-muted)', display: 'inline-flex', alignItems: 'center', gap: 4 }}
-                                        >
-                                            View on Yahoo Finance <ExternalLink size={10} />
-                                        </a>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-                    {tickerResult?.error && (
-                        <div style={{ padding: 40, textAlign: 'center' }}>
-                            <p style={{ color: 'var(--crimson-glow)', fontSize: 16 }}>
-                                🚫 No data found for "{tickerSearch}". Please check the symbol.
-                            </p>
-                        </div>
-                    )}
-                </div>
-
-                {/* Top Movers */}
-                <div className="glass-card" style={{ padding: 0, overflow: 'hidden' }}>
-                    <div style={{
-                        padding: '20px 24px',
-                        borderBottom: '1px solid var(--ninja-border)',
-                        background: 'rgba(255,255,255,0.01)'
-                    }}>
-                        <h3 style={{ fontSize: 18, fontWeight: 700 }}>
-                            <TrendingUp size={18} style={{ verticalAlign: 'middle', marginRight: 8, color: 'var(--primary)' }} />
-                            Today's Top Movers
-                        </h3>
-                    </div>
-                    <div style={{ padding: '20px' }}>
-                        {data?.topMovers?.map((stock, i) => (
-                            <div key={i} style={{
-                                position: 'relative',
-                                paddingLeft: i < 3 ? 32 : 0,
-                                marginBottom: 12
-                            }}>
-                                {i < 3 && (
-                                    <div style={{
-                                        position: 'absolute', left: 0, top: '50%', transform: 'translateY(-50%)',
-                                        width: 24, height: 24, borderRadius: '50%',
-                                        background: i === 0 ? 'var(--amber)' : 'var(--ninja-border)',
-                                        color: i === 0 ? 'black' : 'var(--text-secondary)',
-                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                        fontSize: 12, fontWeight: 700
-                                    }}>
-                                        {i + 1}
-                                    </div>
-                                )}
-                                <StockCard
-                                    stock={stock}
-                                    compact
-                                    onClick={() => setSelectedTicker(stock.ticker)}
-                                />
-                            </div>
-                        ))}
-                    </div>
-                </div>
-
-                {/* Coming Soon Banners */}
-                <div style={{ marginTop: 40 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24, paddingLeft: 8 }}>
-                        <div style={{ width: 4, height: 24, background: 'var(--text-muted)', borderRadius: 2 }} />
-                        <h3 style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                            In The Pipeline
-                        </h3>
-                    </div>
-
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 24 }}>
-                        <FeaturePreviewCard
-                            title="Paper Trading Dojo"
-                            description="Practice with $100k virtual cash. Test your strategies risk-free before entering the real market."
-                            icon={Check}
-                            color="var(--emerald)"
-                            votes={meta['votes_paper_trading'] || 1240}
-                            onVote={() => handleFeatureVote('votes_paper_trading')}
-                        />
-                        <FeaturePreviewCard
-                            title="Strategy Backtesting"
-                            description="Run your custom indicators against 10 years of historical data. Validate before you trade."
-                            icon={Activity}
-                            color="var(--primary)"
-                            votes={meta['votes_strategy_backtesting'] || 892}
-                            onVote={() => handleFeatureVote('votes_strategy_backtesting')}
-                        />
-                    </div>
-                </div>
+            <div>
+              <h1
+                style={{
+                  fontSize: 36,
+                  fontWeight: 900,
+                  marginBottom: 4,
+                  letterSpacing: "-0.02em",
+                }}
+              >
+                Mission <span className="text-gradient">Control</span>
+              </h1>
+              <p style={{ color: "var(--text-muted)", fontSize: 15 }}>
+                Live tracking of Global Battlefronts & High Priority Targets
+              </p>
             </div>
-            {selectedTicker && (
-                <StockDetailModal
-                    ticker={selectedTicker}
-                    onClose={() => setSelectedTicker(null)}
-                />
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            {!user && (
+              <Link
+                to="/"
+                className="btn btn-secondary"
+                style={{ marginRight: 8 }}
+              >
+                <ExternalLink size={16} /> Home Base
+              </Link>
             )}
+            <span
+              className={`badge ${data?.marketOpen ? "badge-green" : "badge-red"} shine-effect`}
+              style={{ height: 36, padding: "0 16px", fontSize: 14 }}
+            >
+              {data?.marketOpen ? <Activity size={16} /> : <Clock size={16} />}
+              {data?.marketOpen ? "Sector Active" : "Sector Inactive"}
+            </span>
+            <button
+              className="btn btn-ghost"
+              onClick={fetchOverview}
+              title="Refresh Intel"
+            >
+              <RefreshCw size={18} />
+            </button>
+          </div>
+        </div>
 
-            <style>{`
+        {/* Market Power Level & Index Cards */}
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+            gap: 24,
+            marginBottom: 48,
+          }}
+        >
+          {/* Power Level Card */}
+          <div
+            className="glass-card standout-card"
+            style={{
+              padding: 24,
+              background:
+                "linear-gradient(135deg, rgba(14, 165, 233, 0.1), rgba(0,0,0,0.3))",
+              border: "1px solid rgba(14, 165, 233, 0.3)",
+              position: "relative",
+              overflow: "hidden",
+            }}
+          >
+            <div
+              style={{
+                position: "absolute",
+                top: -20,
+                right: -20,
+                opacity: 0.1,
+              }}
+            >
+              <Zap size={120} color="var(--primary)" />
+            </div>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
+                marginBottom: 16,
+              }}
+            >
+              <Zap size={20} color="var(--primary)" fill="var(--primary)" />
+              <span
+                style={{
+                  fontSize: 14,
+                  fontWeight: 800,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.1em",
+                }}
+              >
+                Market Power Level
+              </span>
+            </div>
+            <div
+              style={{
+                fontSize: 48,
+                fontWeight: 900,
+                color: "white",
+                marginBottom: 8,
+                fontFamily: "var(--font-mono)",
+              }}
+            >
+              {marketPowerLevel}%
+            </div>
+            <div
+              style={{
+                height: 8,
+                background: "rgba(255,255,255,0.05)",
+                borderRadius: 4,
+                overflow: "hidden",
+              }}
+            >
+              <div
+                style={{
+                  height: "100%",
+                  width: `${marketPowerLevel}%`,
+                  background:
+                    marketPowerLevel > 60
+                      ? "var(--emerald)"
+                      : marketPowerLevel > 30
+                        ? "var(--amber)"
+                        : "var(--crimson)",
+                  boxShadow: `0 0 10px ${marketPowerLevel > 60 ? "var(--emerald)" : marketPowerLevel > 30 ? "var(--amber)" : "var(--crimson)"}`,
+                  transition: "width 1s cubic-bezier(0.19, 1, 0.22, 1)",
+                }}
+              />
+            </div>
+            <p
+              style={{
+                mt: 16,
+                fontSize: 12,
+                color: "var(--text-muted)",
+                marginTop: 16,
+              }}
+            >
+              Sensei's aggregate reading of global momentum.
+            </p>
+          </div>
+
+          {/* Quick Indices */}
+          <div
+            style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}
+          >
+            {data?.indices?.slice(0, 4).map((idx, i) => (
+              <div
+                key={i}
+                className="glass-card"
+                style={{
+                  padding: 16,
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 4,
+                }}
+              >
+                <span
+                  style={{
+                    fontSize: 11,
+                    fontWeight: 800,
+                    color: "var(--text-muted)",
+                    textTransform: "uppercase",
+                  }}
+                >
+                  {idx.name}
+                </span>
+                <span style={{ fontSize: 18, fontWeight: 900 }}>
+                  {idx.price?.toLocaleString()}
+                </span>
+                <span
+                  style={{
+                    fontSize: 12,
+                    fontWeight: 700,
+                    color:
+                      idx.changePct >= 0 ? "var(--emerald)" : "var(--crimson)",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 4,
+                  }}
+                >
+                  {idx.changePct >= 0 ? "+" : ""}
+                  {idx.changePct}%
+                  {idx.changePct >= 0 ? (
+                    <TrendingUp size={12} />
+                  ) : (
+                    <TrendingDown size={12} />
+                  )}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Ticker Search Analysis */}
+        <div
+          className="glass-card search-card"
+          style={{
+            marginBottom: 48,
+            padding: 0,
+            overflow: "hidden",
+            border: "1px solid var(--ninja-border)",
+          }}
+        >
+          <div
+            style={{
+              borderBottom: "1px solid var(--ninja-border)",
+              padding: " clamp(16px, 4vw, 24px)",
+              background: "rgba(255,255,255,0.02)",
+            }}
+          >
+            <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 16 }}>
+              <Search
+                size={18}
+                style={{
+                  verticalAlign: "middle",
+                  marginRight: 8,
+                  color: "var(--primary)",
+                }}
+              />
+              Sensei's Tactical Briefing
+            </h3>
+            <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+              <input
+                type="text"
+                value={tickerSearch}
+                onChange={(e) => setTickerSearch(e.target.value.toUpperCase())}
+                onKeyDown={(e) => e.key === "Enter" && analyzeTicker()}
+                placeholder="Enter Target Code (e.g. AAPL, NVDA)..."
+                style={{
+                  flex: "1 1 200px",
+                  padding: "12px 16px",
+                  background: "var(--ninja-surface)",
+                  border: "1px solid var(--ninja-border)",
+                  borderRadius: "var(--radius-md)",
+                  color: "var(--text-primary)",
+                  fontFamily: "var(--font-mono)",
+                  fontSize: 16,
+                  outline: "none",
+                  transition: "border 0.2s",
+                }}
+                onFocus={(e) => (e.target.style.borderColor = "var(--primary)")}
+                onBlur={(e) =>
+                  (e.target.style.borderColor = "var(--ninja-border)")
+                }
+              />
+              <button
+                className="btn btn-primary"
+                onClick={analyzeTicker}
+                disabled={analyzing}
+                style={{ flex: "1 1 120px" }}
+              >
+                {analyzing ? "Cracking..." : "Commence Scan"}
+              </button>
+            </div>
+          </div>
+
+          {tickerResult && !tickerResult.error && (
+            <div style={{ padding: 32, animation: "fadeIn 0.5s ease" }}>
+              <div
+                style={{
+                  display: "flex",
+                  flexWrap: "wrap",
+                  gap: 32,
+                  alignItems: "start",
+                }}
+              >
+                {/* Left: Metrics */}
+                <div style={{ flex: 1, minWidth: 250 }}>
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "baseline",
+                      gap: 12,
+                      marginBottom: 24,
+                    }}
+                  >
+                    <h2 style={{ fontSize: 32, fontWeight: 900 }}>
+                      {tickerResult.ticker}
+                    </h2>
+                    <span
+                      style={{ fontSize: 24, fontFamily: "var(--font-mono)" }}
+                    >
+                      ${tickerResult.price}
+                    </span>
+                    <span
+                      style={{
+                        fontSize: 18,
+                        fontWeight: 600,
+                        color:
+                          tickerResult.changePct >= 0
+                            ? "var(--emerald)"
+                            : "var(--crimson)",
+                      }}
+                    >
+                      {tickerResult.changePct >= 0 ? "+" : ""}
+                      {tickerResult.changePct}%
+                    </span>
+                  </div>
+
+                  <div style={{ marginBottom: 24 }}>
+                    <div
+                      className={`verdict-badge ${tickerResult.verdict.replace(" ", "-").toLowerCase()}`}
+                    >
+                      {tickerResult.verdict === "STRONG BUY"
+                        ? "STRIKE NOW"
+                        : tickerResult.verdict}
+                    </div>
+                  </div>
+                  <div className="metric-box" style={{ marginBottom: 24 }}>
+                    <div className="metric-label">Sensei's Confidence</div>
+                    <div
+                      style={{ display: "flex", alignItems: "center", gap: 10 }}
+                    >
+                      <NinjaMeditating width={40} height={40} />
+                      <div
+                        style={{
+                          flex: 1,
+                          height: 8,
+                          background: "rgba(255,255,255,0.05)",
+                          borderRadius: 4,
+                          overflow: "hidden",
+                        }}
+                      >
+                        <div
+                          style={{
+                            height: "100%",
+                            width: `${(tickerResult.score || 0) * 10}%`, // Assuming score is 1-10
+                            background: "var(--primary)",
+                            transition: "width 0.8s ease-out",
+                          }}
+                        />
+                      </div>
+                      <span
+                        style={{
+                          fontSize: 14,
+                          fontWeight: 700,
+                          color: "var(--primary)",
+                        }}
+                      >
+                        {(tickerResult.score || 0) * 10}%
+                      </span>
+                    </div>
+                  </div>
+
+                  <div style={{ marginBottom: 24 }}>
+                    <p
+                      style={{
+                        color: "var(--text-secondary)",
+                        fontSize: 15,
+                        lineHeight: 1.6,
+                      }}
+                    >
+                      {tickerResult.reasoning}
+                    </p>
+                  </div>
+
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                    {tickerResult.signals?.map((sig, i) => (
+                      <span
+                        key={i}
+                        className="badge badge-green"
+                        style={{
+                          fontSize: 12,
+                          padding: "6px 12px",
+                          borderRadius: 20,
+                        }}
+                      >
+                        <Target size={12} /> {sig}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Right: Chart & Mascot */}
+                <div style={{ flex: 1.5, minWidth: 300, position: "relative" }}>
+                  {/* Sensei's Avatar */}
+                  <div
+                    style={{
+                      position: "absolute",
+                      top: -20,
+                      right: 0,
+                      zIndex: 10,
+                      animation: "popIn 0.5s cubic-bezier(0.19, 1, 0.22, 1)",
+                    }}
+                  >
+                    {tickerResult.verdict === "STRONG BUY" ? (
+                      <NinjaVictory width={120} height={120} />
+                    ) : tickerResult.verdict === "BUY" ? (
+                      <NinjaMeditating width={100} height={100} />
+                    ) : tickerResult.verdict === "SELL" ? (
+                      <NinjaChaos width={100} height={100} />
+                    ) : (
+                      <NinjaMeditating width={100} height={100} />
+                    )}
+                  </div>
+
+                  <div
+                    style={{
+                      height: 250,
+                      background: "rgba(0,0,0,0.2)",
+                      borderRadius: 16,
+                      padding: 16,
+                      border: "1px solid var(--ninja-border)",
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontSize: 13,
+                        fontWeight: 700,
+                        color: "var(--text-muted)",
+                        marginBottom: 12,
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 6,
+                      }}
+                    >
+                      <Activity size={14} /> HISTORICAL BATTLEFRONT
+                    </div>
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart data={tickerResult.priceHistory}>
+                        <defs>
+                          <linearGradient
+                            id="chartFill"
+                            x1="0"
+                            y1="0"
+                            x2="0"
+                            y2="1"
+                          >
+                            <stop
+                              offset="0%"
+                              stopColor={
+                                tickerResult.changePct >= 0
+                                  ? "var(--emerald)"
+                                  : "var(--crimson)"
+                              }
+                              stopOpacity={0.3}
+                            />
+                            <stop
+                              offset="100%"
+                              stopColor={
+                                tickerResult.changePct >= 0
+                                  ? "var(--emerald)"
+                                  : "var(--crimson)"
+                              }
+                              stopOpacity={0}
+                            />
+                          </linearGradient>
+                        </defs>
+                        <Tooltip
+                          contentStyle={{
+                            background: "var(--ninja-surface)",
+                            border: "1px solid var(--ninja-border)",
+                            borderRadius: 8,
+                            color: "var(--text-primary)",
+                            fontSize: 13,
+                          }}
+                        />
+                        <Area
+                          type="monotone"
+                          dataKey="close"
+                          stroke={
+                            tickerResult.changePct >= 0
+                              ? "var(--emerald)"
+                              : "var(--crimson)"
+                          }
+                          fill="url(#chartFill)"
+                          strokeWidth={2}
+                        />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  </div>
+                  <div style={{ textAlign: "right", marginTop: 8 }}>
+                    <a
+                      href={`https://finance.yahoo.com/quote/${tickerResult.ticker}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{
+                        fontSize: 12,
+                        color: "var(--text-muted)",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 4,
+                      }}
+                    >
+                      View Extended Scroll <ExternalLink size={10} />
+                    </a>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {tickerResult?.error && (
+            <div style={{ padding: 40, textAlign: "center" }}>
+              <p style={{ color: "var(--crimson-glow)", fontSize: 16 }}>
+                🚫 Hostile target "{tickerSearch}" not found. Verify
+                transmission.
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/* Top Movers */}
+        <div className="glass-card" style={{ padding: 0, overflow: "hidden" }}>
+          <div
+            style={{
+              padding: "20px 24px",
+              borderBottom: "1px solid var(--ninja-border)",
+              background: "rgba(255,255,255,0.01)",
+            }}
+          >
+            <h3 style={{ fontSize: 18, fontWeight: 700 }}>
+              <Shield
+                size={18}
+                style={{
+                  verticalAlign: "middle",
+                  marginRight: 8,
+                  color: "var(--primary)",
+                }}
+              />
+              High Priority Targets (Current Combatants)
+            </h3>
+          </div>
+          <div style={{ padding: "20px" }}>
+            {data?.topMovers?.map((stock, i) => (
+              <div
+                key={i}
+                style={{
+                  position: "relative",
+                  paddingLeft: i < 3 ? 40 : 12,
+                  marginBottom: 12,
+                }}
+              >
+                {i < 3 && (
+                  <div
+                    style={{
+                      position: "absolute",
+                      left: 0,
+                      top: "50%",
+                      transform: "translateY(-50%)",
+                      width: 32,
+                      height: 32,
+                      borderRadius: "8px",
+                      background:
+                        i === 0
+                          ? "var(--amber)"
+                          : i === 1
+                            ? "var(--text-muted)"
+                            : "var(--ninja-border)",
+                      color: i === 0 ? "black" : "var(--text-secondary)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontSize: 14,
+                      fontWeight: 900,
+                      border: "1px solid rgba(255,255,255,0.1)",
+                    }}
+                  >
+                    {i === 0 ? <Crown size={16} /> : i + 1}
+                  </div>
+                )}
+                <StockCard
+                  stock={stock}
+                  compact
+                  onClick={() => setSelectedTicker(stock.ticker)}
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Coming Soon Banners */}
+        <div style={{ marginTop: 40 }}>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 12,
+              marginBottom: 24,
+              paddingLeft: 8,
+            }}
+          >
+            <div
+              style={{
+                width: 4,
+                height: 24,
+                background: "var(--primary)",
+                borderRadius: 2,
+              }}
+            />
+            <h3
+              style={{
+                fontSize: 18,
+                fontWeight: 700,
+                color: "var(--text-secondary)",
+                textTransform: "uppercase",
+                letterSpacing: "0.05em",
+              }}
+            >
+              Future <span className="text-gradient">Arsenal</span>
+            </h3>
+          </div>
+
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
+              gap: 24,
+            }}
+          >
+            <FeaturePreviewCard
+              title="Paper Trading Dojo"
+              description="Practice with $100k virtual cash. Test your strategies risk-free before entering the real market."
+              icon={Target}
+              link="/paper-trading"
+              color="var(--amber)"
+            />
+            <FeaturePreviewCard
+              title="Strategy Backtest Chamber"
+              description="Run your custom indicators against 10 years of historical scrolls. Validate before you trade."
+              icon={Activity}
+              color="var(--primary)"
+              votes={meta["votes_strategy_backtesting"] || 892}
+              onVote={() => handleFeatureVote("votes_strategy_backtesting")}
+            />
+          </div>
+        </div>
+      </div>
+      {selectedTicker && (
+        <StockDetailModal
+          ticker={selectedTicker}
+          onClose={() => setSelectedTicker(null)}
+        />
+      )}
+
+      <style>{`
                 #market-overview-page .metric-box { background: rgba(0,0,0,0.2); padding: 12px; borderRadius: 8px; border: 1px solid var(--ninja-border); }
-                #market-overview-page .metric-box .label { font-size: 12px; color: var(--text-muted); margin-bottom: 4px; text-transform: uppercase; }
-                #market-overview-page .metric-box .val { font-size: 18px; font-weight: 700; font-family: var(--font-mono); }
+                #market-overview-page .metric-box .metric-label { font-size: 10px; color: var(--text-muted); margin-bottom: 4px; text-transform: uppercase; font-weight: 800; letter-spacing: 0.05em; }
+                #market-overview-page .metric-box .metric-value { font-size: 18px; font-weight: 900; font-family: var(--font-mono); }
                 
                 #market-overview-page .verdict-badge { 
                     display: inline-block; padding: 12px 24px; border-radius: 8px; 
                     font-size: 18px; font-weight: 900; letter-spacing: 1px;
                 }
-                #market-overview-page .verdict-badge.strong-buy { background: rgba(16, 185, 129, 0.2); color: var(--emerald-glow); border: 1px solid var(--emerald); }
+                #market-overview-page .verdict-badge.strong-buy, #market-overview-page .verdict-badge.strike-now { 
+                    background: rgba(16, 185, 129, 0.2); color: var(--emerald-glow); border: 1px solid var(--emerald); 
+                    box-shadow: 0 0 20px rgba(16, 185, 129, 0.2);
+                }
                 #market-overview-page .verdict-badge.watchlist { background: rgba(245, 158, 11, 0.1); color: var(--amber); border: 1px solid var(--amber); }
                 
                 @keyframes popIn {
@@ -461,23 +887,19 @@ export default function MarketOverview() {
                     #market-overview-page .glass-card { padding: 16px !important; }
                     #market-overview-page .search-card { padding: 0 !important; }
                     
-                    /* Hide Ambient Background */
                     #market-overview-page div[style*="opacity: 0.03"] { display: none !important; }
 
-                    /* Header adjustments */
                     #market-overview-page div[style*="justify-content: space-between"] {
                         flex-direction: column !important;
                         align-items: flex-start !important;
                         gap: 16px !important;
                     }
                     
-                    /* Metric boxes grid */
                     #market-overview-page div[style*="grid-template-columns: 1fr 1fr"] {
                         grid-template-columns: 1fr 1fr !important; 
                         gap: 12px !important;
                     }
 
-                    /* Chart Section Stacking */
                     #market-overview-page div[style*="display: flex"][style*="align-items: start"] {
                         flex-direction: column !important;
                     }
@@ -487,12 +909,11 @@ export default function MarketOverview() {
                         margin-top: 24px !important;
                     }
 
-                    /* Hide Mascot on mobile chart or position it better */
                     #market-overview-page div[style*="animation: popIn"] {
                         display: none !important; 
                     }
                 }
             `}</style>
-        </div>
-    );
+    </div>
+  );
 }

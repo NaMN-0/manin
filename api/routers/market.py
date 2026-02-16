@@ -33,3 +33,17 @@ def analyze(ticker: str):
     if result is None:
         raise HTTPException(status_code=404, detail=f"No data for ticker {ticker}")
     return {"status": "ok", "data": result}
+    
+@router.get("/smart-scan")
+@router.get("/smart-scan")
+def smart_scan(letter: Optional[str] = None, sector: Optional[str] = None, universe: str = "penny", strategy: str = "momentum"):
+    """
+    Smart Discovery Mode: Scans a batch of tickers by 'letter' or 'sector'.
+    Returns 'Coiled Spring' candidates.
+    """
+    from services.market_service import get_smart_batch
+    try:
+        data = get_smart_batch(letter=letter, sector=sector, universe_type=universe, strategy=strategy)
+        return {"status": "ok", "data": data}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

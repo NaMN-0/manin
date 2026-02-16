@@ -1,29 +1,39 @@
 services:
-  api:
+  market-insight-engine:
     build:
       context: .
-      dockerfile: api/Dockerfile
+      dockerfile: Dockerfile
+    ports:
+      - "8501:8501"
+    env_file:
+      - api/.env
+    environment:
+      - PORT=8501
+    restart: unless-stopped
+    volumes:
+      - .:/app
+    command: streamlit run penny_server.py --server.port=8501 --server.address=0.0.0.0 --server.fileWatcherType=auto
+
+  backend-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
     ports:
       - "8000:8000"
     env_file:
       - api/.env
+    environment:
+      - PORT=8000
+      - PYTHONPATH=/app:/app/api
     restart: unless-stopped
-    healthcheck:
-      test: [ "CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')" ]
-      interval: 30s
-      timeout: 10s
-      retries: 3
+    volumes:
+      - .:/app
+    command: uvicorn api.main:app --host 0.0.0.0 --port 8000 --reload
 
   frontend:
     build:
       context: frontend
       dockerfile: Dockerfile
     ports:
-      - "3000:80"
-    depends_on:
-      - api
+      - "80:80"
     restart: unless-stopped
-
-networks:
-  default:
-    name: manin-network

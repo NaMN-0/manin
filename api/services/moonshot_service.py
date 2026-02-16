@@ -87,9 +87,19 @@ class MoonshotService:
                     tech_score += 15
                     reasoning.append("Abnormal Institutional Accumulation")
                 
-                # Breaking 52-week highs is a moonshot signal
+                # Breaking 52-week highs or High Velocity Move is a moonshot signal
                 p = data.get("price", 0)
                 y_high = data.get("yearHigh", 0)
+                
+                # Check for new velocity signals
+                data_signals = str(data.get("signals", []))
+                if "Vertical Move" in data_signals:
+                    tech_score += 15
+                    reasoning.append("Explosive Vertical Momentum Detected")
+                elif "High Velocity" in data_signals:
+                    tech_score += 10
+                    reasoning.append("Strong Velocity Breakout")
+                
                 if p > 0 and y_high > 0 and p >= (y_high * 0.9):
                     tech_score += 10
                     reasoning.append("Breaking 52-Week High Resistance")

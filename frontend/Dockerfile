@@ -11,6 +11,9 @@ RUN npm install
 # Copy all files including .env
 COPY . .
 
+# Remove .env.production to force usage of local .env for this build
+RUN rm -f .env.production
+
 # Run build - Vite will pick up .env from the current directory
 RUN npm run build
 

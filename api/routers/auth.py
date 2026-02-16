@@ -2,6 +2,7 @@
 import os
 from fastapi import APIRouter, Depends, HTTPException
 from middleware.auth import get_current_user
+from services.gamification_service import GamificationService
 import httpx
 
 router = APIRouter()
@@ -75,13 +76,17 @@ async def on_user_login(user: dict = Depends(get_current_user)):
             founders_str = founders_range.split('/')[-1]
             founders_count = int(founders_str) if founders_str.isdigit() else 0
             
+            # 4. Get Gamification Stats
+            stats = await GamificationService.get_user_stats(user_id)
+
             return {
                 "status": "ok",
                 "data": {
                     "userCount": total_count,
                     "foundersCount": founders_count,
                     "foundersLimit": 1000,
-                    "promoApplied": False 
+                    "promoApplied": False,
+                    "gamification": stats
                 }
             }
             
@@ -108,7 +113,12 @@ async def get_user_profile(user: dict = Depends(get_current_user)):
             )
             data = res.json()
             if data and len(data) > 0:
-                return {"status": "ok", "data": data[0]}
+                profile = data[0]
+                # Calculate level on the fly to ensure it's fresh
+                xp = profile.get("xp", 0) or 0
+                profile["level"] = GamificationService.calculate_level(xp)
+                profile["next_level_xp"] = GamificationService.xp_to_next_level(profile["level"])
+                return {"status": "ok", "data": profile}
             return {"status": "ok", "data": {"combat_style": "ronin", "user_profile": {}}}
         except Exception as e:
             print(f"Profile fetch error: {e}")

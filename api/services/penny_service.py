@@ -9,11 +9,13 @@ import gc
 from typing import Optional, List
 import pytz
 from datetime import datetime
+from datetime import datetime
 import requests
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 
 # New Signals Module
-from services.signals import check_structure_liquidity, check_wyckoff_spring
+from services.signals import check_structure_liquidity, check_wyckoff_spring, detect_momentum_velocity
 
 warnings.filterwarnings("ignore")
 
@@ -66,6 +68,20 @@ def _market_progress() -> float:
 
 
 from services.cache_service import CacheService
+
+
+import math
+
+def _check_nan(val):
+    """Converts NaN/Inf to None/0 for JSON safety."""
+    if val is None: return None
+    try:
+        f = float(val)
+        if math.isnan(f) or math.isinf(f):
+            return 0.0
+        return f
+    except:
+        return 0.0
 
 # ─── Universe ─────────────────────────────────────────────────────────────────
 
@@ -258,23 +274,60 @@ def run_full_scan(limit: int = 100) -> list:
     # Limit deep analysis to top 300 to prevent timeout
     targets = [x["ticker"] for x in filtered[:300]] 
 
-    # Phase 2: Deep analysis (Optimized for Render Free Tier: Batch + GC)
+    # Phase 2: Deep analysis (Optimized for Render Free Tier: Batch + Parallel Info)
     market_prog = _market_progress()
     results = []
 
-    # Process targets in small batches to clean memory
+    # Process targets in chunks of 50
+    # We fetch history for 50 tickers at once, and info in parallel
     analysis_chunk_size = 50 
+    
+    import pandas as pd
+    import yfinance as yf
+
     for i in range(0, len(targets), analysis_chunk_size):
         chunk_targets = targets[i : i + analysis_chunk_size]
         
+        # 1. Batch History Download
+        try:
+            # period="6mo" for technicals
+            batch_data = yf.download(chunk_targets, period="6mo", group_by="ticker", threads=True, progress=False, timeout=20)
+        except Exception as e:
+            logger.error(f"Batch history download failed: {e}")
+            batch_data = None
+
+        # 2. Parallel Info Fetching
+        # We use ThreadPoolExecutor to fetch .info concurrently
+        chunk_infos = {}
+        with ThreadPoolExecutor(max_workers=10) as executor:
+            future_to_ticker = {executor.submit(lambda t: yf.Ticker(t).info, t): t for t in chunk_targets}
+            for future in as_completed(future_to_ticker):
+                t = future_to_ticker[future]
+                try:
+                    chunk_infos[t] = future.result()
+                except Exception:
+                    chunk_infos[t] = {}
+
+        # 3. Analyze
         for ticker in chunk_targets:
-            res = _deep_analyze(ticker, market_prog)
+            # Extract specific DF
+            ticker_df = None
+            if batch_data is not None and not batch_data.empty:
+                try:
+                    if len(chunk_targets) == 1:
+                        ticker_df = batch_data
+                    elif ticker in batch_data.columns.levels[0]:
+                        ticker_df = batch_data[ticker]
+                except Exception:
+                    pass
+
+            res = _deep_analyze(ticker, market_prog, pre_df=ticker_df, pre_info=chunk_infos.get(ticker))
             if res:
                 results.append(res)
                 if len(results) >= limit:
                     break
         
-        # Explicit GC after each chunk to free up DataFrame memory
+        # Explicit GC
         gc.collect()
         
         if len(results) >= limit:
@@ -347,14 +400,45 @@ def run_batch_scan(limit: int = 10, offset: int = 0) -> list:
     except Exception:
         pass
 
-    # Phase 2: Deep Analyze the filtered list
+    # Phase 2: Deep Analyze the filtered list (Optimized)
     market_prog = _market_progress()
     results = []
     
-    for ticker in filtered_batch:
-        res = _deep_analyze(ticker, market_prog)
-        if res:
-            results.append(res)
+    if filtered_batch:
+        import yfinance as yf
+        # 1. Batch History
+        try:
+             batch_data = yf.download(filtered_batch, period="6mo", group_by="ticker", threads=True, progress=False, timeout=15)
+        except Exception:
+             batch_data = None
+        
+        # 2. Parallel Info
+        chunk_infos = {}
+        with ThreadPoolExecutor(max_workers=5) as executor:
+            future_to_ticker = {executor.submit(lambda t: yf.Ticker(t).info, t): t for t in filtered_batch}
+            for future in as_completed(future_to_ticker):
+                t = future_to_ticker[future]
+                try:
+                    chunk_infos[t] = future.result()
+                except Exception:
+                    chunk_infos[t] = {}
+
+        # 3. Analyze
+        for ticker in filtered_batch:
+            # Extract specific DF
+            ticker_df = None
+            if batch_data is not None and not batch_data.empty:
+                try:
+                    if len(filtered_batch) == 1:
+                        ticker_df = batch_data
+                    elif ticker in batch_data.columns.levels[0]:
+                        ticker_df = batch_data[ticker]
+                except Exception:
+                    pass
+            
+            res = _deep_analyze(ticker, market_prog, pre_df=ticker_df, pre_info=chunk_infos.get(ticker))
+            if res:
+                results.append(res)
 
     # Save to Cache
     if results:
@@ -363,8 +447,9 @@ def run_batch_scan(limit: int = 10, offset: int = 0) -> list:
     return results
 
 
-def _deep_analyze(ticker: str, market_progress: float = 1.0) -> Optional[dict]:
-    """Deep analysis on a single penny stock."""
+def _deep_analyze(ticker: str, market_progress: float = 1.0, is_pro: bool = False, pre_df=None, pre_info=None) -> Optional[dict]:
+    """Deep analysis on a single penny stock. Supports pre-fetched data for performance."""
+    from services.news_service import NewsService
     try:
         import pandas_ta_classic as ta
         import yfinance as yf
@@ -372,7 +457,12 @@ def _deep_analyze(ticker: str, market_progress: float = 1.0) -> Optional[dict]:
         import numpy as np
 
         stock = yf.Ticker(ticker)
-        df = stock.history(period="6mo")
+        
+        if pre_df is not None and not pre_df.empty:
+            df = pre_df
+        else:
+            df = stock.history(period="6mo")
+            
         if df.empty or len(df) < 30:
             return None
 
@@ -382,24 +472,28 @@ def _deep_analyze(ticker: str, market_progress: float = 1.0) -> Optional[dict]:
 
         # Profit margin
         try:
-            info = stock.info
-            profit_margin = info.get("profitMargins", 0) or 0
-            market_cap = info.get("marketCap", 0)
-            trailing_pe = info.get("trailingPE", 0)
+            if pre_info:
+                info = pre_info
+            else:
+                info = stock.info
+            
+            profit_margin = _check_nan(info.get("profitMargins", 0))
+            market_cap = _check_nan(info.get("marketCap", 0))
+            trailing_pe = _check_nan(info.get("trailingPE", 0))
             sector = info.get("sector", "Unknown")
             industry = info.get("industry", "Unknown")
-            high_52 = info.get("fiftyTwoWeekHigh", 0)
-            low_52 = info.get("fiftyTwoWeekLow", 0)
-            float_shares = info.get("floatShares", 0)
+            high_52 = _check_nan(info.get("fiftyTwoWeekHigh", 0))
+            low_52 = _check_nan(info.get("fiftyTwoWeekLow", 0))
+            float_shares = _check_nan(info.get("floatShares", 0))
         except Exception:
-            profit_margin = 0
-            market_cap = 0
-            trailing_pe = 0
+            profit_margin = 0.0
+            market_cap = 0.0
+            trailing_pe = 0.0
             sector = "Unknown"
             industry = "Unknown"
-            high_52 = 0
-            low_52 = 0
-            float_shares = 0
+            high_52 = 0.0
+            low_52 = 0.0
+            float_shares = 0.0
 
         # Technical indicators
         df.ta.rsi(length=14, append=True)
@@ -482,6 +576,13 @@ def _deep_analyze(ticker: str, market_progress: float = 1.0) -> Optional[dict]:
                 signals.append(s)
             score += wyckoff_setup['score']
             
+        # 3. Momentum Velocity (Rocket Signals)
+        velocity_setup = detect_momentum_velocity(df)
+        if velocity_setup:
+            for s in velocity_setup['signals']:
+                signals.append(s)
+            score += velocity_setup['score']
+            
         is_profitable = profit_margin > 0
         if is_profitable:
             signals.append(f"Profitable ({profit_margin * 100:.1f}%)")
@@ -498,26 +599,104 @@ def _deep_analyze(ticker: str, market_progress: float = 1.0) -> Optional[dict]:
             for d, c in zip(df.index[-60:], df["Close"].iloc[-60:])
         ]
 
+        # ─── Professional Reasoning (Financial Analysis) ──────────────────────
+        
+        reasoning = []
+        
+        # 1. Opening Assessment (Based on Score)
+        if score >= 8:
+            reasoning.append("Strong technical setup with high-probability bullish convergence.")
+        elif score >= 5:
+            reasoning.append("Moderate potential identified; monitoring for confirmation signals.")
+        else:
+            reasoning.append("Current setup lacks clarity; caution advised until trend resolves.")
+
+        # 2. Volume Logic
+        if vol_ratio > 3.0:
+            reasoning.append(f"Institutional-grade accumulation detected ({vol_ratio:.1f}x avg volume).")
+        elif vol_ratio > 1.5:
+            reasoning.append(f"Notable volume increase ({vol_ratio:.1f}x), suggesting rising interest.")
+
+        # 3. Upside & Valuation
+        if upside > 30:
+            reasoning.append(f"Deep value deviation suggests significant upside potential of ~{upside:.0f}%.")
+        elif upside > 10:
+            reasoning.append(f"Price objective implies {upside:.0f}% upside from current levels.")
+
+        # 4. Profitability / Health
+        if is_profitable:
+            reasoning.append(f"Company is profitable ({profit_margin * 100:.1f}% margin), providing fundamental support.")
+        
+        # 5. Technical Setups (Alpha Suite)
+        if liq_setup:
+            reasoning.append("Liquidity sweep detected; potential for rapid mean reversion.")
+        if wyckoff_setup:
+            reasoning.append("Wyckoff 'Spring' pattern identified, indicating potential trend reversal.")
+        
+        # New Velocity Reasoning
+        if velocity_setup:
+            v_metrics = velocity_setup.get('velocity_metrics', {})
+            roc_3d = v_metrics.get('roc_3d', 0)
+            if "Vertical Move" in str(velocity_setup['signals']):
+                reasoning.append(f"Parabolic price action detected ({roc_3d:.0f}% 3-day ROC).")
+            elif "Parabolic Acceleration" in str(velocity_setup['signals']):
+                reasoning.append("Accelerated momentum profile suggests aggressive buying pressure.")
+            else:
+                reasoning.append(f"Strong momentum building ({roc_3d:.1f}% ROC).")
+
+        if latest["Close"] > latest.get("SMA_20", 0) and latest["Close"] > latest.get("SMA_50", 0):
+            reasoning.append("Price has reclaimed key moving averages (SMA 20/50).")
+
+        # 6. RSI Logic
+        rsi_val = latest.get("RSI_14", 50)
+        if rsi_val > 70:
+            reasoning.append("RSI indicates overbought conditions; anticipate consolidation.")
+        elif rsi_val < 35:
+            reasoning.append("RSI indicates oversold conditions; potential for relief bounce.")
+
+        # Pro-only insights
+        news_data = None
+        if is_pro:
+            try:
+                # Add News Sentiment
+                news_results = NewsService.analyze_tickers([ticker])
+                if news_results:
+                    news_data = news_results[0]
+                    sentiment_desc = news_data.get('sentiment', 'Neutral')
+                    reasoning.append(f"News sentiment is currently {sentiment_desc}. {news_data.get('outlook', '')}")
+            except Exception as e:
+                logger.warning(f"Failed to fetch pro news for {ticker}: {e}")
+        else:
+            if len(reasoning) > 2:
+                # Keep it concise for non-pro, but professional.
+                reasoning = reasoning[:2]
+                reasoning.append("Detailed analysis reserved for Pro members.")
+
+        reason = " ".join(reasoning)
+
         return {
             "ticker": ticker,
-            "price": round(price, 4),
-            "predicted": round(predicted_price, 4),
-            "changePct": round(change_pct, 2),
-            "upside": round(upside, 1),
-            "margin": round(profit_margin * 100, 1),
+            "price": _check_nan(round(price, 4)),
+            "predicted": _check_nan(round(predicted_price, 4)),
+            "changePct": _check_nan(round(change_pct, 2)),
+            "upside": _check_nan(round(upside, 1)),
+            "margin": _check_nan(round(profit_margin * 100, 1)),
             "isProfitable": is_profitable,
             "score": score,
             "signals": signals,
-            "volume": int(current_vol),
-            "projVolume": int(projected_vol),
+            "reasoning": reason,
+            "newsSentiment": news_data if is_pro else None,
+            "isProInsight": is_pro,
+            "volume": int(current_vol) if current_vol > 0 else 0,
+            "projVolume": int(projected_vol) if projected_vol > 0 else 0,
             "priceHistory": price_history,
-            "marketCap": market_cap,
-            "pe": trailing_pe,
+            "marketCap": _check_nan(market_cap),
+            "pe": _check_nan(trailing_pe),
             "sector": sector,
             "industry": industry,
-            "yearHigh": high_52,
-            "yearLow": low_52,
-            "float": float_shares,
+            "yearHigh": _check_nan(high_52),
+            "yearLow": _check_nan(low_52),
+            "float": _check_nan(float_shares),
         }
     except Exception:
         traceback.print_exc()
@@ -529,6 +708,6 @@ def _deep_analyze(ticker: str, market_progress: float = 1.0) -> Optional[dict]:
         except: pass
 
 
-def analyze_single_penny(ticker: str) -> Optional[dict]:
+def analyze_single_penny(ticker: str, is_pro: bool = False) -> Optional[dict]:
     """Analyze a single penny stock in depth."""
-    return _deep_analyze(ticker, _market_progress())
+    return _deep_analyze(ticker, _market_progress(), is_pro=is_pro)

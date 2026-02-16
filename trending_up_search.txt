@@ -1,0 +1,125 @@
+﻿
+  frontend\src\components\LevelUpModal.jsx:1:import React from 'react';
+  frontend\src\components\LevelUpModal.jsx:2:import { NinjaVictory } from './NinjaIllustrations';
+> frontend\src\components\LevelUpModal.jsx:3:import { X, Award, Zap, TrendingUp } from 'lucide-react';
+  frontend\src\components\LevelUpModal.jsx:4:
+  frontend\src\components\LevelUpModal.jsx:5:export default function LevelUpModal({ level, rank, onClose }) {
+  frontend\src\components\LevelUpModal.jsx:6:    return (
+  frontend\src\components\LevelUpModal.jsx:74:                        <div style={{ fontSize: 14, fontWeight: 700 }}>UNLOCKED</div>
+  frontend\src\components\LevelUpModal.jsx:75:                    </div>
+  frontend\src\components\LevelUpModal.jsx:76:                    <div style={{ textAlign: 'center' }}>
+> frontend\src\components\LevelUpModal.jsx:77:                        <TrendingUp size={20} color="var(--emerald)" style={{ marginBottom: 4 }} />
+  frontend\src\components\LevelUpModal.jsx:78:                        <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>STREAK</div>
+  frontend\src\components\LevelUpModal.jsx:79:                        <div style={{ fontSize: 14, fontWeight: 700 }}>+15%</div>
+  frontend\src\components\LevelUpModal.jsx:80:                    </div>
+> frontend\src\components\MobileStockCard.jsx:1:import { TrendingUp, TrendingDown, ChevronRight } from 'lucide-react';
+  frontend\src\components\MobileStockCard.jsx:2:
+  frontend\src\components\MobileStockCard.jsx:3:export default function MobileStockCard({ stock, onClick, showVolume = true }) {
+  frontend\src\components\MobileStockCard.jsx:4:    const isUp = stock.changePct !== undefined ? stock.changePct >= 0 : (stock.upside >= 0);
+  frontend\src\components\MobileStockCard.jsx:63:                        justifyContent: 'flex-end',
+  frontend\src\components\MobileStockCard.jsx:64:                        gap: 4
+  frontend\src\components\MobileStockCard.jsx:65:                    }}>
+> frontend\src\components\MobileStockCard.jsx:66:                        {isUp ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
+  frontend\src\components\MobileStockCard.jsx:67:                        {changeVal > 0 ? '+' : ''}{changeVal}%
+  frontend\src\components\MobileStockCard.jsx:68:                    </div>
+  frontend\src\components\MobileStockCard.jsx:69:                </div>
+> frontend\src\components\NewsIntelligence.jsx:1:import { TrendingUp, TrendingDown, Info, Newspaper } from 'lucide-react';
+  frontend\src\components\NewsIntelligence.jsx:2:
+  frontend\src\components\NewsIntelligence.jsx:3:export default function NewsIntelligence({ data, loading }) {
+  frontend\src\components\NewsIntelligence.jsx:4:    if (loading) {
+  frontend\src\components\NinjaTrainingLoader.jsx:1:import { useState, useEffect, useRef } from 'react';
+  frontend\src\components\NinjaTrainingLoader.jsx:2:import { NinjaMeditating } from './NinjaIllustrations';
+> frontend\src\components\NinjaTrainingLoader.jsx:3:import { Sparkles, TrendingUp, TrendingDown, Scissors } from 'lucide-react';
+  frontend\src\components\NinjaTrainingLoader.jsx:4:
+  frontend\src\components\NinjaTrainingLoader.jsx:5:export default function NinjaTrainingLoader({ text = "Training Models..." }) {
+  frontend\src\components\NinjaTrainingLoader.jsx:6:    const [score, setScore] = useState(0);
+  frontend\src\components\NinjaTrainingLoader.jsx:120:                        boxShadow: `0 0 20px ${target.type === 'up' ? 'rgba(16, 185, 129, 0.4)' : 'rgba(239, 68, 68, 0.4)'}`,
+  frontend\src\components\NinjaTrainingLoader.jsx:121:                        border: '2px solid rgba(255,255,255,0.2)'
+  frontend\src\components\NinjaTrainingLoader.jsx:122:                    }}>
+> frontend\src\components\NinjaTrainingLoader.jsx:123:                        {target.type === 'up' ? <TrendingUp size={22} color="white" /> : <TrendingDown size={22} color="white" />}
+  frontend\src\components\NinjaTrainingLoader.jsx:124:                    </div>
+  frontend\src\components\NinjaTrainingLoader.jsx:125:                </div>
+  frontend\src\components\NinjaTrainingLoader.jsx:126:            ))}
+> frontend\src\components\StockCard.jsx:1:import { TrendingUp, TrendingDown, Rocket, Eye, Hand } from 'lucide-react';
+  frontend\src\components\StockCard.jsx:2:
+  frontend\src\components\StockCard.jsx:3:export default function StockCard({ stock, onClick, compact = false }) {
+  frontend\src\components\StockCard.jsx:4:    const isPositive = stock.changePct >= 0;
+  frontend\src\components\StockCard.jsx:29:                        ${stock.price?.toFixed(2)}
+  frontend\src\components\StockCard.jsx:30:                    </span>
+  frontend\src\components\StockCard.jsx:31:                    <span className={`badge ${isPositive ? 'badge-green' : 'badge-red'}`}>
+> frontend\src\components\StockCard.jsx:32:                        {isPositive ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
+  frontend\src\components\StockCard.jsx:33:                        {stock.changePct >= 0 ? '+' : ''}{stock.changePct?.toFixed(2)}%
+  frontend\src\components\StockCard.jsx:34:                    </span>
+  frontend\src\components\StockCard.jsx:35:                </div>
+  frontend\src\components\StockCard.jsx:57:                    </p>
+  frontend\src\components\StockCard.jsx:58:                </div>
+  frontend\src\components\StockCard.jsx:59:                <span className={`badge ${isPositive ? 'badge-green' : 'badge-red'}`} style={{ fontSize: 13, padding: '6px 12px' }}>
+> frontend\src\components\StockCard.jsx:60:                    {isPositive ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
+  frontend\src\components\StockCard.jsx:61:                    {stock.changePct >= 0 ? '+' : ''}{stock.changePct?.toFixed(2)}%
+  frontend\src\components\StockCard.jsx:62:                </span>
+  frontend\src\components\StockCard.jsx:63:            </div>
+  frontend\src\components\StockDetailModal.jsx:2:import { useEffect, useState, useMemo, memo } from 'react';
+  frontend\src\components\StockDetailModal.jsx:3:import { Link } from 'react-router-dom';
+  frontend\src\components\StockDetailModal.jsx:4:import {
+> frontend\src\components\StockDetailModal.jsx:5:    X, ExternalLink, TrendingUp, TrendingDown, Activity,
+  frontend\src\components\StockDetailModal.jsx:6:    BarChart3, DollarSign, Globe, Layers, AlertTriangle, Shield, Zap,
+  frontend\src\components\StockDetailModal.jsx:7:    Target, Sword, Scroll, Flame, Award, Crown
+  frontend\src\components\StockDetailModal.jsx:8:} from 'lucide-react';
+  frontend\src\pages\Landing.jsx:6:    NinjaHeroIdle, NinjaHeroScanning, NinjaHeroDash, NinjaHeroShield, NinjaHeroVictory, NinjaHeroGlitch,
+  frontend\src\pages\Landing.jsx:7:    NinjaDojo, NinjaDiamond, NinjaMaster, NinjaInitiate
+  frontend\src\pages\Landing.jsx:8:} from '../components/NinjaIllustrations';
+> frontend\src\pages\Landing.jsx:9:import { Zap, ArrowRight, MousePointer2, Shield, Target, TrendingUp, Scroll, Sword, Zap as ZapIcon } from 'lucide-react';
+  frontend\src\pages\Landing.jsx:10:import { useState, useEffect, useRef, useMemo } from 'react';
+  frontend\src\pages\Landing.jsx:11:
+  frontend\src\pages\Landing.jsx:12:// 🌧️ MATRIX RAIN
+  frontend\src\pages\MarketOverview.jsx:6:import MobileStockCard from '../components/MobileStockCard';
+  frontend\src\pages\MarketOverview.jsx:7:import FeaturePreviewCard from '../components/FeaturePreviewCard';
+  frontend\src\pages\MarketOverview.jsx:8:import {
+> frontend\src\pages\MarketOverview.jsx:9:    TrendingUp, TrendingDown, Activity, BarChart3, RefreshCw, Clock, Search, AlertTriangle, Check, ExternalLink
+  frontend\src\pages\MarketOverview.jsx:10:} from 'lucide-react';
+  frontend\src\pages\MarketOverview.jsx:11:import { useAuth } from '../context/AuthContext';
+  frontend\src\pages\MarketOverview.jsx:12:import { useGame } from '../context/GameContext';
+  frontend\src\pages\MarketOverview.jsx:209:                                fontWeight: 700,
+  frontend\src\pages\MarketOverview.jsx:210:                                fontSize: 15,
+  frontend\src\pages\MarketOverview.jsx:211:                            }}>
+> frontend\src\pages\MarketOverview.jsx:212:                                {idx.changePct >= 0 ? <TrendingUp size={16} /> : <TrendingDown size={16} />}
+  frontend\src\pages\MarketOverview.jsx:213:                                {idx.changePct >= 0 ? '+' : ''}{idx.changePct}%
+  frontend\src\pages\MarketOverview.jsx:214:                                <span style={{ color: 'var(--text-muted)', fontWeight: 400, fontSize: 13, marginLeft: 4 }}>
+  frontend\src\pages\MarketOverview.jsx:215:                                    ({idx.change >= 0 ? '+' : ''}{idx.change})
+  frontend\src\pages\MarketOverview.jsx:372:                        background: 'rgba(255,255,255,0.01)'
+  frontend\src\pages\MarketOverview.jsx:373:                    }}>
+  frontend\src\pages\MarketOverview.jsx:374:                        <h3 style={{ fontSize: 18, fontWeight: 700 }}>
+> frontend\src\pages\MarketOverview.jsx:375:                            <TrendingUp size={18} style={{ verticalAlign: 'middle', marginRight: 8, color: 'var(--primary)' }} />
+  frontend\src\pages\MarketOverview.jsx:376:                            Today's Top Movers
+  frontend\src\pages\MarketOverview.jsx:377:                        </h3>
+  frontend\src\pages\MarketOverview.jsx:378:                    </div>
+  frontend\src\pages\Onboarding.jsx:2:import { Link } from 'react-router-dom';
+  frontend\src\pages\Onboarding.jsx:3:import {
+  frontend\src\pages\Onboarding.jsx:4:    Radar, Zap, Coins, ArrowRight, Shield, Target,
+> frontend\src\pages\Onboarding.jsx:5:    TrendingUp, Award, BookOpen, CheckCircle
+  frontend\src\pages\Onboarding.jsx:6:} from 'lucide-react';
+  frontend\src\pages\Onboarding.jsx:7:import { NinjaMeditating, NinjaCharting, NinjaRocket, NinjaZen, NinjaDojo } from '../components/NinjaIllustrations';
+  frontend\src\pages\Onboarding.jsx:8:
+  frontend\src\pages\PennyStocks.jsx:4:import { useAuth } from '../context/AuthContext';
+  frontend\src\pages\PennyStocks.jsx:5:import { useGame } from '../context/GameContext';
+  frontend\src\pages\PennyStocks.jsx:6:import {
+> frontend\src\pages\PennyStocks.jsx:7:    Search, RefreshCw, TrendingUp, TrendingDown, ArrowUpDown,
+  frontend\src\pages\PennyStocks.jsx:8:    Lock, Zap, Filter, ChevronRight, Target, ExternalLink, Crown
+  frontend\src\pages\PennyStocks.jsx:9:} from 'lucide-react';
+  frontend\src\pages\PennyStocks.jsx:10:import NinjaTrainingLoader from '../components/NinjaTrainingLoader';
+  frontend\src\pages\ProDashboard.jsx:4:import { useAuth } from '../context/AuthContext';
+  frontend\src\pages\ProDashboard.jsx:5:import {
+  frontend\src\pages\ProDashboard.jsx:6:    Activity, Play, Zap, Shield, Target, Award, Terminal, BrainCircuit, Search,
+> frontend\src\pages\ProDashboard.jsx:7:    TrendingUp, TrendingDown
+  frontend\src\pages\ProDashboard.jsx:8:} from 'lucide-react';
+  frontend\src\pages\ProDashboard.jsx:9:import NinjaLoader from '../components/NinjaLoader';
+  frontend\src\pages\ProDashboard.jsx:10:import {
+  frontend\src\pages\ProDashboard.jsx:624:                <div style={{ textAlign: 'right' }}>
+  frontend\src\pages\ProDashboard.jsx:625:                    <div style={{ fontSize: 20, fontWeight: 800, color: 'white' }}>${stock.price}</div>
+  frontend\src\pages\ProDashboard.jsx:626:                    <div style={{ color: isUp ? 'var(--emerald)' : 'var(--crimson)', fontWeight: 700, fontSize: 12, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 4 }}>
+> frontend\src\pages\ProDashboard.jsx:627:                        {isUp ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
+  frontend\src\pages\ProDashboard.jsx:628:                        {isUp ? '+' : ''}{stock.upside}% PROJ.
+  frontend\src\pages\ProDashboard.jsx:629:                    </div>
+  frontend\src\pages\ProDashboard.jsx:630:                </div>
+
+

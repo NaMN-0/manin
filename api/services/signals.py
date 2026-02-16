@@ -111,3 +111,54 @@ def check_wyckoff_spring(df: pd.DataFrame) -> dict:
         logger.error(f"Error in check_wyckoff_spring: {e}")
 
     return None
+
+def detect_momentum_velocity(df: pd.DataFrame) -> dict:
+    """
+    Detects high-velocity price moves (Rocket signals).
+    Logic focuses on Rate of Change (ROC) over 1, 3, and 5 days.
+    """
+    try:
+        if len(df) < 10:
+            return None
+
+        current = df.iloc[-1]
+        prev_1d = df.iloc[-2]
+        prev_3d = df.iloc[-4] if len(df) >= 4 else df.iloc[0]
+        prev_5d = df.iloc[-6] if len(df) >= 6 else df.iloc[0]
+
+        roc_1d = (current['Close'] - prev_1d['Close']) / prev_1d['Close'] * 100
+        roc_3d = (current['Close'] - prev_3d['Close']) / prev_3d['Close'] * 100
+        roc_5d = (current['Close'] - prev_5d['Close']) / prev_5d['Close'] * 100
+
+        signals = []
+        score = 0
+
+        # 1. Vertical Move (Extremely High 3-Day ROC)
+        if roc_3d > 100:
+            signals.append(f"Vertical Move ({roc_3d:.0f}%)")
+            score += 10
+        elif roc_3d > 40:
+            signals.append(f"High Velocity ({roc_3d:.0f}%)")
+            score += 7
+
+        # 2. Acceleration (Today's move is faster than past days)
+        if roc_1d > 15 and roc_1d > roc_3d / 2:
+            signals.append("Parabolic Acceleration")
+            score += 5
+
+        # 3. Multi-day Ramp
+        if roc_5d > 20 and roc_3d > 10 and roc_1d > 0:
+            signals.append("Sustained Momentum")
+            score += 3
+
+        if signals:
+            return {"signals": signals, "score": score, "velocity_metrics": {
+                "roc_1d": roc_1d,
+                "roc_3d": roc_3d,
+                "roc_5d": roc_5d
+            }}
+            
+    except Exception as e:
+        logger.error(f"Error in detect_momentum_velocity: {e}")
+
+    return None

@@ -6,6 +6,7 @@ import httpx
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 from middleware.auth import get_current_user
+from services.gamification_service import GamificationService
 import time
 
 router = APIRouter()
@@ -185,12 +186,45 @@ async def subscription_status(user: dict = Depends(get_current_user)):
         except Exception as e:
             print(f"Error checking trial status: {e}")
     
+    # Fetch Gamification Stats
+    stats = await GamificationService.get_user_stats(user_id) if user_id else {}
+
     return {
         "status": "ok",
         "data": {
             "isPro": is_pro,
             "hasUsedTrial": has_used_trial,
             "plan": plan,
-            "priceLabel": "Lifetime Founder" if plan == "lifetime_founder" else "Free"
+            "priceLabel": "Lifetime Founder" if plan == "lifetime_founder" else "Free",
+            "gamification": stats
         }
     }
+
+@router.post("/trial/consume")
+async def consume_trial(user: dict = Depends(get_current_user)):
+    """
+    Marks the user's one-time trial as used.
+    """
+    user_id = user.get("id", user.get("sub", ""))
+    
+    if not user_id:
+        raise HTTPException(status_code=400, detail="User ID not found")
+
+    async with httpx.AsyncClient() as client:
+        headers = {
+            "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
+            "apikey": SUPABASE_SERVICE_KEY,
+            "Content-Type": "application/json",
+            "Prefer": "return=minimal"
+        }
+        try:
+            # Update has_used_trial to true
+            await client.patch(
+                f"{SUPABASE_URL}/rest/v1/manin_users?id=eq.{user_id}",
+                headers=headers,
+                json={"has_used_trial": True}
+            )
+            return {"status": "ok", "message": "Trial consumed"}
+        except Exception as e:
+            print(f"Error consuming trial: {e}")
+            raise HTTPException(status_code=500, detail=str(e))

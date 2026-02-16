@@ -194,16 +194,250 @@ def analyze_ticker(ticker: str) -> Optional[dict]:
             for d, c in zip(df.index[-60:], df["Close"].iloc[-60:])
         ]
 
+        # Fundamentals
+        try:
+            t_obj = yf.Ticker(ticker)
+            info = t_obj.info
+            market_cap = info.get("marketCap")
+            pe_ratio = info.get("trailingPE")
+            year_high = info.get("fiftyTwoWeekHigh")
+            year_low = info.get("fiftyTwoWeekLow")
+            short_name = info.get("shortName", ticker)
+            sector = info.get("sector", "Unknown")
+            beta = info.get("beta")
+        except Exception:
+            market_cap, pe_ratio, year_high, year_low, short_name, sector, beta = None, None, None, None, ticker, "Unknown", None
+
+        # Predicted price (Placeholder simulation logic based on score)
+        # Real logic would use ML model
+        predicted_price = float(latest["Close"]) * (1 + (score * 0.02)) if score > 0 else float(latest["Close"])
+
         return {
             "ticker": ticker,
-            "price": round(float(latest["Close"]), 2),
-            "changePct": round(change_pct, 2),
+            "companyName": short_name,
+            "sector": sector,
+            "price": check_nan(round(float(latest["Close"]), 2)),
+            "changePct": check_nan(round(change_pct, 2)),
+            "volume": check_nan(float(latest["Volume"])),
+            "marketCap": check_nan(market_cap),
+            "pe": check_nan(pe_ratio),
+            "yearHigh": check_nan(year_high),
+            "yearLow": check_nan(year_low),
+            "beta": check_nan(beta),
+            "predicted": check_nan(round(predicted_price, 2)),
             "score": score,
             "verdict": verdict,
-            "rsi": round(rsi_val, 1),
+            "reasoning": f"Asset {ticker} showing {verdict} signals. RSI: {rsi_val:.1f}. Trend is {'Bullish' if trend else 'Bearish'}.",
+            "rsi": check_nan(round(rsi_val, 1)),
             "signals": signals,
             "priceHistory": price_history,
         }
     except Exception as e:
         traceback.print_exc()
         return None
+
+# ─── Smart Discovery Engine ──────────────────────────────────────────────────
+
+def scan_volatility_setup(tickers: list, min_price=0.0, max_price=None) -> list:
+    """
+    "Coiled Spring" Logic:
+    1. Strong move in last 3-5 days (>10%).
+    2. Consolidating now (taking a breath).
+    3. Volume is holding up (Accumulation).
+    """
+    try:
+        import yfinance as yf
+        import pandas as pd
+        
+        # Need slightly more data for "recent move" check
+        # Use simple download for batch
+        data = yf.download(tickers, period="10d", group_by='ticker', threads=True, progress=False)
+        candidates = []
+        
+        # Helper implementation for single/multi ticker
+        def check_setup(df, ticker):
+            if df.empty or len(df) < 5: return False
+            
+            latest = df.iloc[-1]
+            price = latest['Close']
+            
+            # Price constraints
+            if price < min_price: return False
+            if max_price and price > max_price: return False
+            
+            # 1. Volatility / Big Move Check
+            pct_changes = df['Close'].pct_change().tail(5)
+            max_gain = pct_changes.max()
+            
+            if max_gain < 0.05: return False # Need some life
+                
+            # 2. Consolidation
+            high_5d = df['High'].tail(5).max()
+            if price < (high_5d * 0.85): # Relaxed to 15% drop allowed for pennies
+                return False
+                
+            # 3. Volume Heat
+            avg_vol = df['Volume'].tail(10).mean()
+            if avg_vol == 0: return False
+            rvol = latest['Volume'] / avg_vol
+            
+            if rvol > 1.2: return True
+            return False
+
+        if len(tickers) == 1:
+            if check_setup(data, tickers[0]):
+                candidates.append(tickers[0])
+        else:
+            for ticker in tickers:
+                try:
+                    df = data[ticker] if len(tickers) > 1 else data
+                    if check_setup(df, ticker):
+                        candidates.append(ticker)
+                except: continue
+        
+        return candidates
+    except Exception:
+        return []
+
+def get_sector_accuracy(filter_val: str, filter_type: str = "letter", universe_type="penny") -> dict:
+    """
+    Calculates the 'Sensei Success Rate' for a given sector/letter.
+    Based on historical returns (last 7 days) of a sample of stocks.
+    """
+    cache_key = f"accuracy_{universe_type}_{filter_type}_{filter_val.upper()}"
+    cached = CacheService.get(cache_key, max_age_minutes=60)
+    if cached:
+        return cached
+
+    tickers = []
+    if universe_type == "penny":
+        try:
+            import penny_loader
+            if filter_type == "sector":
+                # Get all tickers and filter by sector
+                all_penny = penny_loader.get_penny_stocks(max_price=5.0)
+                metadata = penny_loader.get_ticker_metadata()
+                tickers = [t for t in all_penny if metadata.get(t, {}).get('sector') == filter_val]
+            else:
+                all_penny = penny_loader.get_penny_stocks(max_price=5.0)
+                tickers = [t for t in all_penny if t.startswith(filter_val.upper())]
+        except ImportError:
+            pass
+    
+    if not tickers:
+        return {"accuracy": 0, "win_rate": 0, "sample_size": 0}
+
+    # Take a sample for performance
+    import random
+    sample = random.sample(tickers, min(len(tickers), 15))
+    
+    win_count = 0
+    try:
+        import yfinance as yf
+        data = yf.download(sample, period="7d", interval="1d", progress=False, group_by='ticker')
+        
+        for t in sample:
+            try:
+                df = data[t] if len(sample) > 1 else data
+                if df.empty or len(df) < 5: continue
+                
+                # Check 7 day return
+                start_price = float(df['Close'].iloc[0])
+                end_price = float(df['Close'].iloc[-1])
+                if end_price > start_price:
+                    win_count += 1
+            except: continue
+    except:
+        pass
+
+    accuracy = (win_count / len(sample)) * 100 if sample else 0
+    result = {
+        "accuracy": round(accuracy, 1),
+        "win_rate": round(accuracy, 1),
+        "sample_size": len(sample),
+        "period": "7 days"
+    }
+    
+    CacheService.set(cache_key, result)
+    return result
+
+def get_smart_batch(letter: Optional[str] = None, sector: Optional[str] = None, universe_type="penny", strategy="momentum") -> dict:
+    """
+    Scans a batch of tickers by `letter` OR `sector`.
+    Returns candidates and a few top picks.
+    """
+    # 1. Get Tickers
+    tickers = []
+    filter_val = letter if letter else sector
+    filter_type = "letter" if letter else "sector"
+    
+    if not filter_val:
+        return {"candidates": [], "top_picks": [], "accuracy_data": {"accuracy": 0}}
+
+    if universe_type == "penny":
+        try:
+            import penny_loader
+            all_penny = penny_loader.get_penny_stocks(max_price=5.0) 
+            
+            if sector:
+                metadata = penny_loader.get_ticker_metadata()
+                # Exact match for sector
+                tickers = [t for t in all_penny if metadata.get(t, {}).get('sector') == sector]
+                if not tickers and sector == "Technology": # Fallback if empty, maybe try partial match?
+                    # Try to be smarter? No, keep simple.
+                    pass
+            elif letter:
+                tickers = [t for t in all_penny if t.startswith(letter.upper())]
+        except ImportError:
+            tickers = []
+    else:
+        pass
+    
+    if not tickers:
+        # Fallback empty result
+        return {
+            "letter": filter_val, # maintain key name for frontend compatibility or change
+            "filter_val": filter_val,
+            "filter_type": filter_type,
+            "candidates": [], 
+            "top_picks": [], 
+            "accuracy_data": {"accuracy": 0}
+        }
+    
+    # 2. Get Accuracy Data
+    accuracy_data = get_sector_accuracy(filter_val, filter_type, universe_type)
+    
+    # 3. Scan
+    candidates = []
+    if strategy == "momentum":
+        # Penny / Momentum Scan
+        # Scan in sub-batches if large
+        batch_size = 50
+        limit_tickers = tickers[:200] # Hard limit for response time
+        
+        raw_candidates = []
+        for i in range(0, len(limit_tickers), batch_size):
+            batch = limit_tickers[i:i+batch_size]
+            passed = scan_volatility_setup(batch, min_price=0, max_price=5.0)
+            raw_candidates.extend(passed)
+            
+        # Analyze passed candidates deeply
+        for ticker in raw_candidates[:20]: # Cap analysis
+             analysis = analyze_ticker(ticker)
+             if analysis:
+                 candidates.append(analysis)
+    
+    # 4. Sorting & Curation
+    candidates.sort(key=lambda x: x['score'], reverse=True)
+    
+    top_picks = candidates[:3]
+    
+    return {
+        "letter": filter_val, # Legacy field for frontend which expects 'letter'
+        "filter_val": filter_val,
+        "filter_type": filter_type,
+        "count": len(candidates),
+        "candidates": candidates,
+        "top_picks": top_picks,
+        "accuracy_data": accuracy_data
+    }

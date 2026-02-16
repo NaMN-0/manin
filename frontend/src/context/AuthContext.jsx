@@ -1,108 +1,146 @@
-import { createContext, useContext, useEffect, useState, useRef } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { supabase } from '../lib/supabase';
-import api from '../lib/api';
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  useRef,
+  useCallback,
+} from "react";
+import { useNavigate, useLocation } from "react-router-dom";
+import { supabase } from "../lib/supabase"; // KEEP this for Supabase auth
+import client from "../api/client"; // Use the new API client for other calls
+import { gameApi } from "../api/game"; // Import gameApi for gamification stats
 
 const AuthContext = createContext({});
 
 export function AuthProvider({ children }) {
-    const [user, setUser] = useState(null);
-    const [session, setSession] = useState(null);
-    const [loading, setLoading] = useState(true);
-    const [isPro, setIsPro] = useState(false);
-    const [hasUsedTrial, setHasUsedTrial] = useState(false);
-    const navigate = useNavigate();
-    const location = useLocation();
-    const didRedirect = useRef(false);
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [isPro, setIsPro] = useState(false);
+  const [hasUsedTrial, setHasUsedTrial] = useState(false);
+  const [gamificationStats, setGamificationStats] = useState(null);
+  const navigate = useNavigate();
+  const location = useLocation();
+  const didRedirect = useRef(false);
 
-    useEffect(() => {
-        // Get initial session (Supabase will have already processed any hash tokens
-        // via detectSessionInUrl before this runs)
-        supabase.auth.getSession().then(({ data: { session: s } }) => {
-            setSession(s);
-            setUser(s?.user ?? null);
-            if (s) {
-                checkProStatus();
-                // If we just came from OAuth (hash in URL), redirect to /penny
-                if (!didRedirect.current && window.location.hash.includes('access_token')) {
-                    didRedirect.current = true;
-                    window.history.replaceState(null, '', window.location.pathname);
-                    navigate('/penny', { replace: true });
-                }
-            }
-            setLoading(false);
-        });
+  const fetchGamificationStats = useCallback(async (userId) => {
+    try {
+      const stats = await gameApi.getStats(userId);
+      setGamificationStats(stats);
+    } catch (error) {
+      console.error("Error fetching gamification stats:", error);
+      setGamificationStats(null);
+    }
+  }, []);
 
-        // Listen for auth state changes
-        const { data: { subscription } } = supabase.auth.onAuthStateChange(
-            (event, s) => {
-                console.log('[Auth] Event:', event);
-                setSession(s);
-                setUser(s?.user ?? null);
+  const checkProStatus = useCallback(async (userId) => {
+    try {
+      // Endpoint uses JWT to identify user, no need to pass userId in path
+      const { data } = await client.get("/api/payments/status");
+      setIsPro(data?.isPro || false);
+      setHasUsedTrial(data?.hasUsedTrial || false);
+    } catch (error) {
+      console.error("Error checking pro status:", error);
+      setIsPro(false);
+      setHasUsedTrial(false);
+    }
+  }, []);
 
-                if (event === 'SIGNED_IN' && s && !didRedirect.current) {
-                    checkProStatus();
-                    didRedirect.current = true;
-                    // Clean hash if present
-                    if (window.location.hash) {
-                        window.history.replaceState(null, '', window.location.pathname);
-                    }
-                    // Navigate to penny if on landing or login
-                    if (location.pathname === '/' || location.pathname === '/login') {
-                        navigate('/penny', { replace: true });
-                    }
-                }
+  const loadUserSession = useCallback(async () => {
+    setLoading(true);
+    const {
+      data: { session: s },
+    } = await supabase.auth.getSession();
+    // setSession(s); // No longer needed
+    setUser(s?.user ?? null);
 
-                if (event === 'SIGNED_OUT') {
-                    setIsPro(false);
-                    didRedirect.current = false;
-                }
+    if (s?.user) {
+      await checkProStatus(s.user.id);
+      await fetchGamificationStats(s.user.id);
+    } else {
+      setIsPro(false);
+      setHasUsedTrial(false);
+      setGamificationStats(null);
+    }
+    setLoading(false);
+  }, [checkProStatus, fetchGamificationStats]);
 
-                if (event === 'TOKEN_REFRESHED' && s) {
-                    checkProStatus();
-                }
+  useEffect(() => {
+    loadUserSession();
 
-                setLoading(false);
-            }
-        );
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (event, s) => {
+      console.log("[Auth] Event:", event);
+      // setSession(s); // No longer needed
+      setUser(s?.user ?? null);
 
-        return () => subscription.unsubscribe();
-    }, []);
-
-    async function checkProStatus() {
-        try {
-            const res = await api.get('/payments/status');
-            setIsPro(res.data?.data?.isPro || false);
-            setHasUsedTrial(res.data?.data?.hasUsedTrial || false);
-        } catch {
-            setIsPro(false);
-            setHasUsedTrial(false);
+      if (event === "SIGNED_IN" && s?.user) {
+        await checkProStatus(s.user.id);
+        await fetchGamificationStats(s.user.id);
+        // Handle redirect after sign-in
+        if (!didRedirect.current) {
+          didRedirect.current = true;
+          if (window.location.hash) {
+            window.history.replaceState(null, "", window.location.pathname);
+          }
+          if (location.pathname === "/" || location.pathname === "/login") {
+            navigate("/penny", { replace: true });
+          }
         }
-    }
-
-    async function signInWithGoogle() {
-        const { error } = await supabase.auth.signInWithOAuth({
-            provider: 'google',
-            options: {
-                redirectTo: window.location.origin,
-            },
-        });
-        if (error) console.error('Login error:', error.message);
-    }
-
-    async function signOut() {
-        await supabase.auth.signOut();
-        setUser(null);
-        setSession(null);
+      } else if (event === "SIGNED_OUT") {
         setIsPro(false);
-        navigate('/', { replace: true });
-    }
+        setHasUsedTrial(false);
+        setGamificationStats(null);
+        didRedirect.current = false;
+        navigate("/", { replace: true });
+      } else if (event === "TOKEN_REFRESHED" && s?.user) {
+        await checkProStatus(s.user.id);
+        await fetchGamificationStats(s.user.id);
+      }
+      setLoading(false);
+    });
 
-    return (
-        <AuthContext.Provider value={{ user, session, loading, isPro, hasUsedTrial, signInWithGoogle, signOut, checkProStatus }}>
-            {children}
-        </AuthContext.Provider>
-    );
+    return () => subscription.unsubscribe();
+  }, [location.pathname, navigate, checkProStatus, fetchGamificationStats]);
+
+  async function signInWithGoogle() {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback`,
+      },
+    });
+    if (error) console.error("Login error:", error.message);
+  }
+
+  async function signOut() {
+    await supabase.auth.signOut();
+    setUser(null);
+    // setSession(null); // No longer needed
+    setIsPro(false);
+    setGamificationStats(null);
+    navigate("/", { replace: true });
+  }
+
+  return (
+    <AuthContext.Provider
+      value={{
+        user,
+        loading,
+        isPro,
+        hasUsedTrial,
+        gamificationStats,
+        signInWithGoogle,
+        signOut,
+        checkProStatus,
+        fetchGamificationStats,
+      }}
+    >
+      {children}
+    </AuthContext.Provider>
+  );
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useAuth = () => useContext(AuthContext);

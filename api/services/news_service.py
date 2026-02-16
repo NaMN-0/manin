@@ -30,42 +30,64 @@ class NewsService:
         for ticker in tickers:
             try:
                 stock = yf.Ticker(ticker)
-                news = stock.news[:5] # Top 5 news items
+                # yfinance news fetching can be flaky or network-dependent
+                try:
+                    news = stock.news
+                    if not news:
+                        news = []
+                except Exception as e:
+                    print(f"Warning: yfinance news fetch failed for {ticker}: {e}")
+                    news = []
+                
+                # Limit to top 5
+                news = news[:5] if news else []
                 
                 sentiment_score = 0
                 summaries = []
                 
                 for item in news:
-                    # yfinance structure changed: title is often in item['content']['title']
-                    content = item.get('content', {})
-                    title = content.get('title') or item.get('title', '')
-                    title = title.lower()
-                    
-                    # Basic sentiment count
-                    bull_hits = sum(1 for w in BULLISH_WORDS if w in title)
-                    bear_hits = sum(1 for w in BEARISH_WORDS if w in title)
-                    
-                    sentiment_score += (bull_hits - bear_hits)
-                    summaries.append(content.get('title') or item.get('title', ''))
-
-                if not news:
-                    # Even if no news, we return the ticker with neutral status so UI knows it was processed
-                    # Or we can skip. Let's return with neutral to show "No News" state.
-                    pass
+                    # Robust extraction of title/content
+                    # yfinance structure varies between versions
+                    title = ""
+                    try:
+                        if 'content' in item and isinstance(item['content'], dict):
+                            title = item['content'].get('title', '')
+                        elif 'title' in item:
+                            title = item['title']
+                        
+                        if not title:
+                            continue
+                            
+                        title_lower = title.lower()
+                        
+                        # Basic sentiment count
+                        bull_hits = sum(1 for w in BULLISH_WORDS if w in title_lower)
+                        bear_hits = sum(1 for w in BEARISH_WORDS if w in title_lower)
+                        
+                        sentiment_score += (bull_hits - bear_hits)
+                        summaries.append(title)
+                    except Exception:
+                        continue
 
                 # Normalization and categorization
                 sentiment_label = "Neutral"
-                if sentiment_score > 1: sentiment_label = "Bullish"
-                elif sentiment_score < -1: sentiment_label = "Bearish"
+                if sentiment_score >= 2: sentiment_label = "Bullish"
+                elif sentiment_score <= -2: sentiment_label = "Bearish"
                 
                 # Fetch basic price data for context
+                price = 0.0
+                change_pct = 0.0
                 try:
+                    # optim: fetch minimal history
                     price_info = stock.history(period="1d")
-                    price = round(price_info['Close'].iloc[-1], 2) if not price_info.empty else 0
-                    change_pct = round(((price_info['Close'].iloc[-1] - price_info['Open'].iloc[-1]) / price_info['Open'].iloc[-1]) * 100, 2) if not price_info.empty else 0
-                except:
-                    price = 0
-                    change_pct = 0
+                    if not price_info.empty:
+                        close_price = price_info['Close'].iloc[-1]
+                        open_price = price_info['Open'].iloc[-1]
+                        price = round(float(close_price), 2)
+                        if open_price > 0:
+                            change_pct = round(((close_price - open_price) / open_price) * 100, 2)
+                except Exception as e:
+                    print(f"Warning: price fetch failed for {ticker} in news service: {e}")
 
                 results.append({
                     "ticker": ticker,
@@ -74,12 +96,23 @@ class NewsService:
                     "sentimentScore": sentiment_score,
                     "sentiment": sentiment_label,
                     "newsCount": len(news),
-                    "headline": summaries[0] if summaries else "No recent headlines",
+                    "headline": summaries[0] if summaries else "No recent headlines detected",
                     "outlook": NewsService._generate_outlook(sentiment_score, ticker)
                 })
 
             except Exception as e:
-                print(f"News Analysis Error for {ticker}: {e}")
+                print(f"Critical News Analysis Error for {ticker}: {e}")
+                # Return a safe default object to prevent frontend crash
+                results.append({
+                    "ticker": ticker,
+                    "price": 0.0,
+                    "changePct": 0.0,
+                    "sentimentScore": 0,
+                    "sentiment": "Neutral",
+                    "newsCount": 0,
+                    "headline": "Analysis data unavailable",
+                    "outlook": "Unable to retrieve news data at this time."
+                })
                 continue
         
         # Sort by sentiment magnitude

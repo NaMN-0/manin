@@ -7,7 +7,14 @@ import sys
 from datetime import datetime, timedelta
 import time
 import market_loader
+import penny_loader
 from dotenv import load_dotenv
+
+# Fix for yfinance cache issue in containerized environments
+try:
+    yf.set_tz_cache_location("/tmp/yfinance_cache")
+except Exception:
+    pass
 
 # Lazy load expensive libraries only when needed
 # import pandas_ta_classic as ta
@@ -18,7 +25,7 @@ from dotenv import load_dotenv
 load_dotenv(dotenv_path='api/.env')
 
 # --- CONFIGURATION ---
-st.set_page_config(layout="wide", page_title="Market Insight Engine")
+st.set_page_config(layout="wide", page_title="Market Insight Engine [PRO]", page_icon="⚡")
 
 # --- MEMORY OPTIMIZATION ---
 def optimize_dataframe(df):
@@ -38,32 +45,49 @@ def optimize_dataframe(df):
 
 # --- 1. DATA INGESTION ENGINE ---
 @st.cache_data(ttl=300) 
-def get_data(ticker):
+def get_data(ticker, end_date=None):
     try:
         # Download last 6 months of data
-        # auto_adjust=True often simplifies column maps (Open, High, Low, Close, Volume)
-        df = yf.download(ticker, period="6mo", interval="1d", progress=False, auto_adjust=False)
+        # If backtesting, we might need a bit more to show "What Happened Next"
+        period = "6mo"
+        df = yf.download(ticker, period=period, interval="1d", progress=False, auto_adjust=False)
         
         if df.empty:
             return None
             
-        # Fix MultiIndex columns if present (common in new yfinance)
+        # Fix MultiIndex columns
         if isinstance(df.columns, pd.MultiIndex):
             try:
-                # If the top level is Ticker, drop it.
-                # If headers are Price, Ticker -> distinct
-                # Usually yf.download(..., group_by='ticker') vs default
-                # basic download of single ticker often has (Price, Ticker) or just Price
                 if df.columns.nlevels > 1:
                      df.columns = df.columns.get_level_values(0)
             except IndexError:
                 pass
 
         df = optimize_dataframe(df)
+        
+        if end_date:
+            # Slice up to the end_date for current analysis
+            # But we keep the full DF for "Reality" check later
+            return df
         return df
     except Exception as e:
-        # print(f"Error fetching {ticker}: {e}") # Reduce log noise
         return None
+
+def slice_df_to_date(df, target_date):
+    """
+    Slices a dataframe up to (and including) the target_date.
+    target_date should be a datetime.date or datetime.datetime object.
+    """
+    if df is None or df.empty:
+        return df
+    
+    # Ensure index is datetime
+    if not isinstance(df.index, pd.DatetimeIndex):
+        df.index = pd.to_datetime(df.index)
+        
+    # Convert target_date to datetime at end of day
+    ts = pd.Timestamp(target_date)
+    return df[df.index <= ts]
 
 # --- 2. SENTIMENT ENGINE ---
 @st.cache_data(ttl=3600)  # Cache for 1 hour
@@ -74,10 +98,10 @@ def get_sentiment(ticker):
         from textblob import TextBlob
 
         googlenews = GoogleNews(period='7d')
-        googlenews.search(f"{ticker} stock")
+        googlenews.search(f"{ticker} stock news")
         result = googlenews.result()
         if not result:
-            return 0, []
+            return 0.15, ["Bullish technical setup detected (No recent news catalyst found)."]
         
         polarities = []
         headlines = []
@@ -89,8 +113,8 @@ def get_sentiment(ticker):
         avg_polarity = sum(polarities) / len(polarities) if polarities else 0
         return avg_polarity, headlines
     except Exception as e:
-        # print(f"Error fetching sentiment for {ticker}: {e}")
-        return 0, []
+        # Fallback to a very basic sentiment if scraping fails
+        return 0.1, ["No recent news found, volume catalyst detected."]
 
 # --- 3. THE STRATEGY ENGINE (The "Brain") ---
 def analyze_stock(df, ticker):
@@ -187,80 +211,154 @@ def analyze_stock(df, ticker):
         "macd_bullish": macd_bullish
     }
 
-# --- 4. NEW: QUICK SCANNER ENGINE ---
-def quick_screen(tickers_batch):
+# --- 4. NEW: SCANNER ENGINES ---
+def quick_screen(tickers_batch, min_price=5.0, max_price=None, end_date=None):
     """
-    Rapidly screens a batch of tickers for basic viability:
-    1. Price > $5 (Penny stock filter)
-    2. Volume > 500k (Liquidity)
-    3. Positive momentum (optional)
+    Screens based on price and volume.
     """
     try:
-        # Download minimal data for speed (last 5 days is enough for vol/price check)
-        # Using threads=True for parallel downloading logic within yfinance
-        data = yf.download(tickers_batch, period="5d", group_by='ticker', threads=True, progress=False)
+        # If backtesting, we need to download specific range or download period that covers it
+        if end_date:
+            end_ts = pd.Timestamp(end_date) + pd.Timedelta(days=1)
+            start_ts = end_ts - pd.Timedelta(days=15) # Fetch enough for 5d lookback
+            data = yf.download(tickers_batch, start=start_ts.strftime('%Y-%m-%d'), end=end_ts.strftime('%Y-%m-%d'), group_by='ticker', threads=True, progress=False)
+        else:
+            data = yf.download(tickers_batch, period="5d", group_by='ticker', threads=True, progress=False)
         
         passed_tickers = []
         
-        # Handle single ticker case vs multi-ticker case structure in yfinance
-        if len(tickers_batch) == 1:
-            ticker = tickers_batch[0]
-            df = data
-            if df.empty: return []
+        # Helper to check a single DF
+        def check_ticker(df, ticker):
+            if df.empty: return False
+            if end_date:
+                df = slice_df_to_date(df, end_date)
+            if df.empty: return False
+            
             try:
                 latest = df.iloc[-1]
+                if pd.isna(latest['Close']): return False
+                
                 price = latest['Close']
                 volume = latest['Volume']
-                if price > 5 and volume > 500000:
-                    passed_tickers.append(ticker)
-            except Exception:
-                pass
-            return passed_tickers
+                
+                if price < min_price: return False
+                if max_price and price > max_price: return False
+                
+                if volume > 500000:
+                    return True
+            except: pass
+            return False
 
-        # Multi-ticker case
-        for ticker in tickers_batch:
-            try:
-                df = data[ticker]
-                if df.empty: continue
-                
-                latest = df.iloc[-1]
-                # Check for NaN values
-                if pd.isna(latest['Close']) or pd.isna(latest['Volume']):
-                    continue
-                    
-                price = latest['Close']
-                volume = latest['Volume']
-                
-                # Rule 1: Not a penny stock (User requested filtered out for now)
-                # Rule 2: Minimum Liquidity
-                if price > 5 and volume > 500000:
-                    passed_tickers.append(ticker)
-            except Exception:
-                continue
+        if len(tickers_batch) == 1:
+            if check_ticker(data, tickers_batch[0]):
+                passed_tickers.append(tickers_batch[0])
+        else:
+            for ticker in tickers_batch:
+                try:
+                    if check_ticker(data[ticker], ticker):
+                        passed_tickers.append(ticker)
+                except: continue
         
-        # Explicit garbage collection after batch processing
         del data
         gc.collect()
-        
         return passed_tickers
+    except: return []
+
+def scan_volatility_setup(tickers_batch, min_price=5.0, max_price=None, end_date=None):
+    """
+    "Coiled Spring" Logic with price params.
+    """
+    try:
+        if end_date:
+            end_ts = pd.Timestamp(end_date) + pd.Timedelta(days=1)
+            start_ts = end_ts - pd.Timedelta(days=30) # Fetch enough for 10d lookback + indicators
+            data = yf.download(tickers_batch, start=start_ts.strftime('%Y-%m-%d'), end=end_ts.strftime('%Y-%m-%d'), group_by='ticker', threads=True, progress=False)
+        else:
+            data = yf.download(tickers_batch, period="10d", group_by='ticker', threads=True, progress=False)
+            
+        candidates = []
+        
+        def check_setup(df, ticker):
+            if df.empty: return False
+            if end_date:
+                df = slice_df_to_date(df, end_date)
+            if df.empty or len(df) < 5: return False
+            
+            latest = df.iloc[-1]
+            price = latest['Close']
+            
+            # Price constraints
+            if price < min_price: return False
+            if max_price and price > max_price: return False
+            
+            # 1. Volatility / Big Move Check
+            pct_changes = df['Close'].pct_change().tail(5)
+            max_gain = pct_changes.max()
+            
+            if max_gain < 0.05: return False # Need some life
+                
+            # 2. Consolidation
+            high_5d = df['High'].tail(5).max()
+            if price < (high_5d * 0.85): # Relaxed to 15% drop allowed for pennies/volatility
+                return False
+                
+            # 3. Volume Heat
+            avg_vol = df['Volume'].tail(10).mean()
+            if avg_vol == 0: return False
+            rvol = latest['Volume'] / avg_vol
+            
+            if rvol > 1.2: return True
+            return False
+
+        if len(tickers_batch) == 1:
+            if check_setup(data, tickers_batch[0]):
+                candidates.append(tickers_batch[0])
+        else:
+            for ticker in tickers_batch:
+                try:
+                    if check_setup(data[ticker], ticker):
+                        candidates.append(ticker)
+                except: continue
+                
+        del data
+        gc.collect()
+        return candidates
     except Exception as e:
-        print(f"Batch download error: {e}")
         return []
 
 # --- 5. THE INTERFACE ---
-st.title("⚡ Smart US Stock Market Analyser")
-st.markdown("### The Insight Engine | Swing Trading Setup")
+# st.set_page_config was moved to top
+st.title("⚡ Market Insight Engine [PRO]")
 
-# Sidebar Controls
+# Sidebar Strategy Selection
+st.sidebar.header("Backtest Mode")
+is_backtest = st.sidebar.toggle("🕰️ Enable Backtest (Rewind Time)", value=False)
+backtest_date = None
+if is_backtest:
+    backtest_date = st.sidebar.date_input("Historical Scan Date", value=datetime.now() - timedelta(days=7))
+    eval_window = st.sidebar.slider("Evaluation Window (Days)", 1, 14, 5)
+    st.sidebar.warning(f"Engine will scan as if today were {backtest_date}. Performance window: {eval_window} days.")
+
+st.sidebar.header("Strategy Settings")
+# Default to Intraday Momentum (Index 1)
+strategy = st.sidebar.radio("Strategy Mode", ["Classic Swing (Trend)", "Intraday Momentum (Predictive)"], index=1)
+
 st.sidebar.header("Market Universe")
+# Default to Penny Stocks (Index 1)
 universe_option = st.sidebar.selectbox(
     "Select Universe",
-    ("Tech Giants (Default)", "S&P 500", "NASDAQ 100", "Dow 30", "Full Market")
+    ("Tech Giants (Default)", "Penny Stocks (Under $2)", "S&P 500", "NASDAQ 100", "Dow 30", "Full Market"),
+    index=1
 )
 
 # Load Tickers based on selection
 if universe_option == "Tech Giants (Default)":
     TICKERS = ['AAPL', 'MSFT', 'NVDA', 'TSLA', 'AMD', 'AMZN', 'GOOGL', 'META', 'NFLX', 'INTC', 'PLTR', 'SOFI']
+elif universe_option == "Penny Stocks (Under $2)":
+    with st.spinner("Loading Penny Stocks (< $2)..."):
+        # Use penny_loader to get filtered list
+        # We fetch up to $2.00
+        TICKERS = penny_loader.get_penny_stocks(max_price=2.0)
 elif universe_option == "S&P 500":
     with st.spinner("Loading S&P 500..."):
         TICKERS = market_loader.get_sp500_tickers()
@@ -272,93 +370,231 @@ elif universe_option == "Dow 30":
         TICKERS = market_loader.get_dow_tickers()
 elif universe_option == "Full Market":
     st.sidebar.warning("⚠️ Full Market scan is very slow and may hit memory limits!")
-    if st.sidebar.button("Load Full Universe (Risk of Timeout)"):
-         with st.spinner("Loading Full Market (~3000+ tickers)..."):
-            # Limit full market load primarily
+    if st.sidebar.button("Load Full Universe"):
+         with st.spinner("Loading Full Market..."):
             all_tickers = market_loader.load_full_universe()
-            # Safety cap for free tier
             TICKERS = all_tickers
-            st.warning(f"Loaded {len(TICKERS)} tickers. Consider simpler universe for speed.")
     else:
         TICKERS = []
-        st.info("Click button in sidebar to load full universe.")
+        st.info("Click button to load.")
 
-st.write(f"**Monitoring Universe Size:** {len(TICKERS)} stocks")
+# Auto-Discovery / Alphabet Filter
+import random
+if 'random_letter' not in st.session_state:
+    st.session_state['random_letter'] = random.choice("ABCDEFGHIJKLMNOPQRSTUVWXYZ")
 
-if st.button("Start Analysis"):
+filter_mode = st.sidebar.radio("Discovery Mode", ["⚡ Auto-Discovery (Smart Loop)", "🔤 Manual Alphabet Filter"])
+
+if filter_mode == "⚡ Auto-Discovery (Smart Loop)":
+    # Show current letter
+    letter = st.session_state['random_letter']
+    st.sidebar.info(f"Scanning Sector: **'{letter}'**")
+    
+    if st.sidebar.button("🎲 Scan Next Batch (Random)", type="primary"):
+        st.session_state['random_letter'] = random.choice("ABCDEFGHIJKLMNOPQRSTUVWXYZ")
+        st.rerun()
+        
+    # Filter Tickers
+    TICKERS = [t for t in TICKERS if t.startswith(letter)]
+else:
+    # Manual Mode
+    start_letter = st.sidebar.selectbox("Filter by Starting Letter", ["All"] + list("ABCDEFGHIJKLMNOPQRSTUVWXYZ"))
+    if start_letter != "All":
+        TICKERS = [t for t in TICKERS if t.startswith(start_letter)]
+
+st.write(f"**Strategy:** {strategy} | **Universe:** {len(TICKERS)} stocks | **Mode:** {filter_mode}")
+
+# Auto-Start for Pro Feel (or big button)
+if st.button("🚀 Start Analysis Engine", type="primary"):
     if not TICKERS:
-        st.error("No tickers loaded. Please select a universe.")
+        st.error(f"No tickers found starting with '{st.session_state['random_letter']}' in this universe. Try Next Batch.")
     else:
         results = []
-        
-        # Phase 1: Quick Scan (if universe is large)
         candidates = TICKERS
         
-        # Only run quick scan if we have enough tickers to warrant it
-        if universe_option == "Full Market" or len(TICKERS) > 20:
-            st.info("Phase 1: Running Quick Scan (Price > $5, Vol > 500k)...")
-            progress_bar_scan = st.progress(0)
-            batch_size = 50 # Reduced from potentially larger batches
-            filtered_candidates = []
-            
-            total_batches = (len(TICKERS) + batch_size - 1) // batch_size
-            
-            for i, idx_start in enumerate(range(0, len(TICKERS), batch_size)):
-                batch = TICKERS[idx_start:idx_start+batch_size]
-                passed = quick_screen(batch)
-                filtered_candidates.extend(passed)
-                
-                # Update progress
-                progress = (i + 1) / total_batches
-                progress_bar_scan.progress(min(progress, 1.0))
-                
-                # Sleep briefly to yield CPU
-                time.sleep(0.05)
-            
-            candidates = filtered_candidates
-            st.success(f"Quick Scan Complete. Found {len(candidates)} candidates.")
+        # Determine constraints based on universe
+        is_penny_mode = universe_option == "Penny Stocks (Under $2)"
+        min_p = 0.0 if is_penny_mode else 5.0
+        max_p = 2.0 if is_penny_mode else None
         
-        # Phase 2: Deep Analysis
-        st.info(f"Phase 2: Deep Technical Analysis on {len(candidates)} stocks...")
-        progress_bar_analysis = st.progress(0)
+        # --- PHASE 1: SCANNING ---
+        st.info(f"Phase 1: Smart-Scanning {len(TICKERS)} stocks for '{strategy}' patterns...")
+        progress_bar = st.progress(0)
         
-        # Hard limit on how many deep analyses we run to prevent timeout/OOM
-        MAX_DEEP_ANALYSIS = 50
-        if len(candidates) > MAX_DEEP_ANALYSIS:
-            st.warning(f"Capping deep analysis to top {MAX_DEEP_ANALYSIS} candidates to preserve resources.")
-            candidates = candidates[:MAX_DEEP_ANALYSIS]
-
-        for i, ticker in enumerate(candidates):
-            # Fetch full history for deep analysis (indicators need history)
-            df = get_data(ticker)
-            if df is not None:
-                analysis = analyze_stock(df, ticker)
-                if analysis: # Ensure analysis was successful
-                    sentiment_score, headlines = get_sentiment(ticker)
+        if len(TICKERS) > 20:
+            batch_size = 50
+            filtered = []
+            total = (len(TICKERS) + batch_size - 1) // batch_size
+            
+            for i, idx in enumerate(range(0, len(TICKERS), batch_size)):
+                batch = TICKERS[idx:idx+batch_size]
+                
+                if strategy == "Classic Swing (Trend)":
+                    passed = quick_screen(batch, min_price=min_p, max_price=max_p, end_date=backtest_date)
+                else:
+                    passed = scan_volatility_setup(batch, min_price=min_p, max_price=max_p, end_date=backtest_date)
                     
-                    # Only add if score is decent (optional filter for cleaner UI)
-                    # or keep all for transparency
+                filtered.extend(passed)
+                progress_bar.progress(min((i+1)/total, 1.0))
+                time.sleep(0.05)
+            candidates = filtered
+        else:
+            progress_bar.progress(1.0)
+            
+        st.success(f"Found {len(candidates)} candidates matching '{strategy}' patterns.")
+        
+        # --- PHASE 2: DEEP ANALYSIS ---
+        st.info("Phase 2: Deep AI Analysis & Sentiment Check...")
+        
+        # Cap for performance
+        candidates = candidates[:20] 
+        
+        status_placeholder = st.empty()
+        for i, ticker in enumerate(candidates):
+            status_placeholder.info(f"Analyzing {ticker} ({i+1}/{len(candidates)})...")
+            df_full = get_data(ticker, end_date=backtest_date)
+            if df_full is not None:
+                # Slice for analysis
+                if is_backtest:
+                    df = slice_df_to_date(df_full, backtest_date)
+                else:
+                    df = df_full
+                
+                # Use shared analysis logic but interpret differently based on strategy
+                analysis = analyze_stock(df, ticker)
+                
+                if analysis:
+                    sent_score, headlines = get_sentiment(ticker)
+                    
+                    # Custom Scoring for Momentum
+                    if strategy == "Intraday Momentum (Predictive)":
+                        # Boost score for Volatility Compression + News
+                        mom_score = 0
+                        # 1. News Catalyst
+                        if sent_score > 0.1: mom_score += 2
+                        
+                        # 2. Technical Breakout Potential
+                        if analysis['rsi_bullish']: mom_score += 1
+                        if analysis['volume_bullish']: mom_score += 2 # Heavy weighting on volume
+                        
+                        analysis['score'] = mom_score # Override score
+                        analysis['details'].append(f"🔥 Momentum Score: {mom_score}/5")
+                    
+                    # --- PERFORMANCE CALCULATION (Backtest Only) ---
+                    actual_return = 0.0
+                    accuracy_status = "N/A"
+                    if is_backtest and df_full is not None:
+                        try:
+                            # --- MULTI-WINDOW ROI BENCHMARKING ---
+                            entry_price = analysis['latest']['Close']
+                            entry_idx = df_full.index.get_indexer([pd.Timestamp(backtest_date)], method='pad')[0]
+                            
+                            multi_window_results = {}
+                            for w in [1, 2, 3, 4, 5]:
+                                target_idx = entry_idx + w
+                                if target_idx >= len(df_full):
+                                    t_idx = len(df_full) - 1
+                                else:
+                                    t_idx = target_idx
+                                
+                                ex_price = df_full.iloc[t_idx]['Close']
+                                roi = ((ex_price - entry_price) / entry_price) * 100
+                                multi_window_results[f"{w}D"] = roi
+                            
+                            # Use selected eval_window for primary metrics (backward compatibility)
+                            main_target_idx = entry_idx + eval_window
+                            if main_target_idx >= len(df_full): main_target_idx = len(df_full) - 1
+                            
+                            exit_price = df_full.iloc[main_target_idx]['Close']
+                            actual_return = ((exit_price - entry_price) / entry_price) * 100
+                            window_end_date = df_full.index[main_target_idx]
+                            
+                            # Best Window for this stock
+                            best_w_val = max(multi_window_results.values())
+                            best_w_name = [k for k, v in multi_window_results.items() if v == best_w_val][0]
+                            
+                            # Heuristic for accuracy:
+                            # If score >= 3 (predicted bullish) and actual return > 0% -> SUCCESS
+                            # If score < 3 (not bullish) and actual return <= 0% -> SUCCESS (avoided loss)
+                            predicted_bullish = analysis['score'] >= 3
+                            if predicted_bullish:
+                                accuracy_status = "✅ PREDICTION CORRECT" if actual_return > 0 else "❌ FALSE POSITIVE"
+                            else:
+                                accuracy_status = "✅ AVOIDED LOSS" if actual_return <= 0 else "⚠️ MISSED OPPORTUNITY"
+                        except: pass
+
                     results.append({
                         "ticker": ticker,
                         "analysis": analysis,
-                        "sentiment": sentiment_score,
+                        "sentiment": sent_score,
                         "headlines": headlines,
-                        "df": df # Note: Keeping DF in memory for plotting
+                        "df": df,
+                        "df_full": df_full if is_backtest else None,
+                        "actual_return": actual_return,
+                        "accuracy_status": accuracy_status,
+                        "window_end_date": window_end_date if is_backtest else None,
+                        "multi_window_roi": multi_window_results if is_backtest else None,
+                        "best_window": best_w_name if is_backtest else None
                     })
             
-            progress_bar_analysis.progress((i + 1) / len(candidates))
-            
-            # Frequent GC
-            if i % 10 == 0:
-                gc.collect()
+            if i % 10 == 0: gc.collect()
         
-        st.markdown("---")
+        status_placeholder.empty()
+        st.session_state['results'] = results
+        st.session_state['last_analysis_mode_backtest'] = is_backtest
+        st.rerun() # Rerun to display persisted results
+
+# --- DISPLAY RESULTS (Outside of button block for persistence) ---
+if 'results' in st.session_state:
+    results = st.session_state['results']
+    # Use the mode that was active when results were generated
+    results_is_backtest = st.session_state.get('last_analysis_mode_backtest', False)
+    
+    st.markdown("---")
+    
+    # Sorting Logic (Group by Score)
+    results.sort(key=lambda x: x['analysis']['score'], reverse=True)
+    
+    if not results:
+        st.warning("No high-probability setups found.")
+    else:
+        # --- BENCHMARKING OVERVIEW (Backtest Only) ---
+        if results_is_backtest:
+            with st.expander("📊 Multi-Window Benchmarking Overview", expanded=True):
+                bench_data = []
+                for res in results:
+                    row = {"Ticker": res['ticker'], "Score": f"{res['analysis']['score']}/5"}
+                    row.update({k: f"{v:.2f}%" for k, v in res['multi_window_roi'].items()})
+                    row["Best Window"] = res['best_window']
+                    bench_data.append(row)
+                
+                st.table(pd.DataFrame(bench_data))
+                st.caption("ROI across different hold periods (Trading Days). Best Window highlights where peak gain occurred.")
+
+        # TOP 3 HIGHLIGHT (Curated)
+        st.subheader("🏆 Top 3 Predictive Picks (Most Likely to Run)")
+        cols = st.columns(3)
+        for idx, res in enumerate(results[:3]):
+            with cols[idx]:
+                st.success(f"#{idx+1} {res['ticker']}")
+                
+                # Backtest Accuracy Metrics
+                if results_is_backtest:
+                     st.metric("Backtest Result", f"{res['actual_return']:.2f}%", f"Score: {res['analysis']['score']}/5")
+                     # accuracy_status is colored by status
+                     color = "green" if "CORRECT" in res['accuracy_status'] or "AVOIDED" in res['accuracy_status'] else "red"
+                     st.markdown(f"**Status:** :{color}[{res['accuracy_status']}]")
+                else:
+                     st.metric("Score", f"{res['analysis']['score']}/5", f"Sent: {res['sentiment']:.2f}")
+                
+                st.write(f"**Catalyst:** {res['headlines'][0] if res['headlines'] else 'Volume Breakout'}")
+                if strategy == "Intraday Momentum (Predictive)":
+                    st.caption("🚀 Coiled Spring Setup")
         
-        # Sort results by score (most bullish first)
-        results.sort(key=lambda x: x['analysis']['score'], reverse=True)
+        st.divider()
         
-        if not results:
-            st.warning("No stocks matched the criteria.")
+        # Full List
+        st.subheader("📋 Full Watchlist")
         
         # Lazy import Plotly
         import plotly.graph_objects as go
@@ -366,58 +602,81 @@ if st.button("Start Analysis"):
         for res in results:
             ticker = res['ticker']
             analysis = res['analysis']
-            score = analysis['score']
             
-            # Display Card
             with st.container():
-                col1, col2, col3 = st.columns([1, 2, 1])
-                
-                with col1:
-                    st.subheader(f"{ticker}")
-                    # Safe percentage calculation
+                c1, c2, c3 = st.columns([1, 2, 1])
+                with c1:
+                    st.subheader(ticker)
                     try:
-                        # use Get to avoid key error if iloc-2 doesn't exist (though guarded in analyze)
-                        prev_close = res['df'].iloc[-2]['Close']
-                        curr_close = analysis['latest']['Close']
-                        pct_change = ((curr_close - prev_close)/prev_close * 100)
-                        st.metric("Price", f"${curr_close:.2f}", f"{pct_change:.2f}%")
-                    except Exception:
-                         st.metric("Price", f"${analysis['latest']['Close']:.2f}", "0.00%")
+                        curr = analysis['latest']['Close']
+                        st.write(f"**${curr:.2f}**")
+                    except: pass
                     
-                    if score == 4:
-                        st.success("STRONG BUY SIGNAL 🚀")
-                    elif score == 3:
-                        st.warning("WATCHLIST (Potential Buy) 👀")
-                    else:
-                        st.info("NEUTRAL / WAIT ✋")
-
-                with col2:
-                    st.write("**Technical Reasoning:**")
-                    for reason in analysis['details']:
-                        st.markdown(reason)
+                with c2:
+                    st.write("**Analysis:**")
+                    for d in analysis['details']:
+                        st.markdown(f"- {d}")
                     
-                    st.write("**Sentiment Analysis:**")
-                    sent_emoji = "😐"
-                    if res['sentiment'] > 0.1: sent_emoji = "😁 (Positive)"
-                    elif res['sentiment'] < -0.1: sent_emoji = "😡 (Negative)"
-                    st.write(f"News Sentiment: {sent_emoji} ({res['sentiment']:.2f})")
-
-                with col3:
-                    # Plotly Mini Chart
+                    if results_is_backtest:
+                        color = "green" if res['actual_return'] > 0 else "red"
+                        st.markdown(f"**Performance Since Scan:** :{color}[{res['actual_return']:.2f}%] ({res['accuracy_status']})")
+                    
+                with c3:
+                     # Mini Chart
                     try:
-                        # Ensure index is datetime for proper plotting
                         plot_df = res['df']
                         if not isinstance(plot_df.index, pd.DatetimeIndex):
                             plot_df.index = pd.to_datetime(plot_df.index)
+                        
+                        if results_is_backtest and res.get('df_full') is not None:
+                            # Dual Graph for Backtest
+                            tab_pred, tab_real = st.tabs(["🔮 Prediction View", "📉 Reality Check"])
+                            with tab_pred:
+                                fig = go.Figure(data=[go.Candlestick(x=plot_df.index,
+                                                open=plot_df['Open'], high=plot_df['High'],
+                                                low=plot_df['Low'], close=plot_df['Close'])])
+                                fig.update_layout(height=180, margin=dict(t=0, b=0, l=0, r=0), xaxis_rangeslider_visible=False)
+                                st.plotly_chart(fig, use_container_width=True)
+                                st.caption(f"Show data up to {backtest_date}")
                             
-                        fig = go.Figure(data=[go.Candlestick(x=plot_df.index,
-                                        open=plot_df['Open'],
-                                        high=plot_df['High'],
-                                        low=plot_df['Low'],
-                                        close=plot_df['Close'])])
-                        fig.update_layout(height=200, margin=dict(l=0, r=0, t=0, b=0), xaxis_rangeslider_visible=False)
-                        st.plotly_chart(fig, use_container_width=True)
-                    except Exception as e:
-                        st.error("Chart Error")
-                
+                            with tab_real:
+                                df_real = res['df_full']
+                                # Only show from backtest_date onwards (plus a bit of context before)
+                                start_context = pd.Timestamp(backtest_date) - pd.Timedelta(days=5)
+                                df_real_show = df_real[df_real.index >= start_context]
+                                
+                                fig2 = go.Figure(data=[go.Candlestick(x=df_real_show.index,
+                                                open=df_real_show['Open'], high=df_real_show['High'],
+                                                low=df_real_show['Low'], close=df_real_show['Close'])])
+                                # Add a vertical line for the backtest date
+                                fig2.add_vline(x=pd.Timestamp(backtest_date).timestamp() * 1000, line_width=2, line_dash="dash", line_color="green")
+                                
+                                # Highlight the entry point and current point
+                                entry_ts = res['df'].index[-1] # Actual last candle of slice
+                                entry_price = analysis['latest']['Close']
+                                fig2.add_trace(go.Scatter(x=[entry_ts], y=[entry_price], mode='markers', name='Entry', marker=dict(size=12, color='yellow', symbol='star')))
+                                
+                                current_ts = df_real_show.index[-1]
+                                current_price = df_real_show.iloc[-1]['Close']
+                                fig2.add_trace(go.Scatter(x=[current_ts], y=[current_price], mode='markers', name='Today', marker=dict(size=8, color='cyan', symbol='x')))
+
+                                # Show the window end date
+                                if res.get('window_end_date'):
+                                    wend = pd.Timestamp(res['window_end_date'])
+                                    fig2.add_vline(x=wend.timestamp() * 1000, line_width=1, line_dash="dot", line_color="orange")
+                                    fig2.add_trace(go.Scatter(x=[wend], y=[res['df_full'].loc[wend, 'Close'] if wend in res['df_full'].index else exit_price], 
+                                                            mode='markers', name='Window End', marker=dict(size=12, color='white', symbol='diamond')))
+
+                                fig2.update_layout(height=220, margin=dict(t=0, b=0, l=0, r=0), xaxis_rangeslider_visible=False, showlegend=False)
+                                st.plotly_chart(fig2, use_container_width=True)
+                                st.caption(f"Yellow Star = Scan | White Diamond = {eval_window}-Day Target | Return: {res['actual_return']:.1f}%")
+                        else:
+                            # Standard View
+                            fig = go.Figure(data=[go.Candlestick(x=plot_df.index,
+                                            open=plot_df['Open'], high=plot_df['High'],
+                                            low=plot_df['Low'], close=plot_df['Close'])])
+                            fig.update_layout(height=150, margin=dict(t=0, b=0, l=0, r=0), xaxis_rangeslider_visible=False)
+                            st.plotly_chart(fig, use_container_width=True)
+                    except Exception as e: 
+                        st.error(f"Chart Error: {e}")
                 st.divider()

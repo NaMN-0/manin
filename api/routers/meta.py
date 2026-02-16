@@ -1,11 +1,34 @@
 from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel
 import os
 import httpx
+from services.gamification_service import GamificationService # Import the service
 
 router = APIRouter()
 
 SUPABASE_URL = os.getenv("SUPABASE_URL", "")
 SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_SERVICE_KEY", "")
+
+class AddXpRequest(BaseModel):
+    userId: str
+    amount: int
+    action: str
+
+@router.get("/stats/{user_id}")
+async def get_user_gamification_stats(user_id: str):
+    """Fetch user's gamification stats (XP, level, rank)."""
+    stats = await GamificationService.get_user_stats(user_id)
+    if "error" in stats:
+        raise HTTPException(status_code=500, detail=stats["error"])
+    return stats
+
+@router.post("/xp")
+async def add_xp_to_user(request: AddXpRequest):
+    """Add XP to a user and check for level up."""
+    result = await GamificationService.add_xp(request.userId, request.amount, request.action)
+    if "error" in result:
+        raise HTTPException(status_code=500, detail=result["error"])
+    return result
 
 @router.get("/")
 async def get_all_meta():
@@ -63,3 +86,4 @@ async def increment_meta(key: str):
         except Exception as e:
             print(f"Increment error: {e}")
             raise HTTPException(status_code=500, detail=str(e))
+

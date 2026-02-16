@@ -3,8 +3,12 @@ Manin API — Market Ninja Backend
 FastAPI server wrapping the existing quant analysis engine.
 """
 
-import os
 import sys
+import os
+
+# Add parent directory to path so we can import existing modules
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from dotenv import load_dotenv
 
 # Load environment variables early
@@ -13,6 +17,13 @@ load_dotenv()
 from core.logging_config import setup_logging
 setup_logging()
 
+# Fix for yfinance cache issue in containerized environments
+import yfinance as yf
+try:
+    yf.set_tz_cache_location("/tmp/yfinance_cache")
+except Exception:
+    pass
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -20,9 +31,10 @@ from datetime import datetime, timedelta
 from services.market_service import get_market_overview
 
 # Add parent directory to path so we can import existing modules
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+# Add parent directory to path so we can import existing modules
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from routers import market, penny, payments, auth, meta, news
+from routers import market, penny, payments, auth, meta, news, sensei
 
 app = FastAPI(
     title="Manin API",
@@ -61,6 +73,8 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         frontend_url, 
+        "http://localhost",
+        "http://localhost:80",
         "http://localhost:5173", 
         "http://localhost:3000",
         "https://kage.sourcer.live",
@@ -78,7 +92,7 @@ app.include_router(payments.router, prefix="/api/payments", tags=["Payments"])
 app.include_router(auth.router, prefix="/api/auth", tags=["Auth"])
 app.include_router(meta.router, prefix="/api/meta", tags=["Meta"])
 app.include_router(news.router, prefix="/api/news", tags=["News Intelligence"])
-
+app.include_router(sensei.router, prefix="/api/sensei", tags=["Sensei Intelligence"]) # New router
 
 @app.get("/api/health")
 async def health_check():
