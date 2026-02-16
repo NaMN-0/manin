@@ -8,7 +8,8 @@ import {
   Zap,
   Filter,
   Terminal,
-  Brain,
+  BrainCircuit,
+  Target,
   Crown, // Keep Crown as it's used in Top Picks
   ShieldCheck, // Keep ShieldCheck for Accuracy
 } from "lucide-react";
@@ -402,7 +403,7 @@ export default function PennyStocks() {
                       justifyContent: "center",
                     }}
                   >
-                    <Brain size={24} color="var(--primary)" />
+                    <BrainCircuit size={24} color="var(--primary)" />
                   </div>
                   <div>
                     <div
