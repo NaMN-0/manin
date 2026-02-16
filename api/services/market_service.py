@@ -41,6 +41,35 @@ def check_nan(val):
     except:
         return None
 
+def generate_market_commentary(indices_data, top_movers, market_open) -> str:
+    """Generates AI-style commentary based on market state."""
+    if not indices_data:
+        return "The battlefield is quiet. Sensei is observing the shadows for signs of movement."
+    
+    # Simple logic to determine sentiment
+    bullish_indices = [idx for idx in indices_data if idx.get('changePct', 0) > 0]
+    is_bullish = len(bullish_indices) > len(indices_data) / 2
+    
+    avg_change = sum([idx.get('changePct', 0) for idx in indices_data]) / len(indices_data)
+    
+    if not market_open:
+        msg = "The markets have retreated to their camps. "
+        if is_bullish:
+            msg += f"The last session showed strength with an average gain of {avg_change:.2f}%. Bulls hold the high ground."
+        else:
+            msg += f"Recent combat saw the bears pushing back. Average retreat: {abs(avg_change):.2f}%. Prepare for the next bell."
+        return msg
+
+    # Market Open logic
+    if is_bullish:
+        if avg_change > 1.5:
+            return f"A powerful surge! Markets are charging forward by {avg_change:.2f}%. Strikes are landing with precision today."
+        return f"Steady momentum. The green banners are flying high across the indices ({avg_change:.2f}% avg)."
+    else:
+        if avg_change < -1.5:
+            return f"Hostile forces in control. A significant retreat of {abs(avg_change):.2f}% detected. Exercise extreme caution, Ninja."
+        return f"Consolidation in progress. Minor volatility ({avg_change:.2f}%) as the bulls and bears engage in tactical skirmishes."
+
 # Removed global in-memory cache variables as we used CacheService now
 
 def get_market_overview() -> dict:
@@ -79,7 +108,14 @@ def get_market_overview() -> dict:
     # Top movers from a quick scan of popular tickers
     top_movers = _get_top_movers()
     
-    result = {"indices": indices_data, "topMovers": top_movers, "marketOpen": _is_market_open()}
+    commentary = generate_market_commentary(indices_data, top_movers, _is_market_open())
+    
+    result = {
+        "indices": indices_data, 
+        "topMovers": top_movers, 
+        "marketOpen": _is_market_open(),
+        "commentary": commentary
+    }
     
     # Save to Supabase Cache
     CacheService.set("market_overview", result)
@@ -110,7 +146,7 @@ def _get_top_movers() -> list:
     ]
     try:
         import yfinance as yf
-        data = yf.download(watchlist, period="2d", group_by="ticker", threads=False, progress=False)
+        data = yf.download(watchlist, period="5d", group_by="ticker", threads=False, progress=False)
         movers = []
         for ticker in watchlist:
             try:
@@ -404,28 +440,61 @@ def get_smart_batch(letter: Optional[str] = None, sector: Optional[str] = None, 
             "accuracy_data": {"accuracy": 0}
         }
     
-    # 2. Get Accuracy Data
-    accuracy_data = get_sector_accuracy(filter_val, filter_type, universe_type)
-    
-    # 3. Scan
-    candidates = []
-    if strategy == "momentum":
-        # Penny / Momentum Scan
-        # Scan in sub-batches if large
-        batch_size = 50
-        limit_tickers = tickers[:200] # Hard limit for response time
+        # 2. Get Accuracy Data
+        accuracy_data = get_sector_accuracy(filter_val, filter_type, universe_type)
         
-        raw_candidates = []
-        for i in range(0, len(limit_tickers), batch_size):
-            batch = limit_tickers[i:i+batch_size]
-            passed = scan_volatility_setup(batch, min_price=0, max_price=5.0)
-            raw_candidates.extend(passed)
+        # 3. Scan
+        candidates = []
+        if strategy == "momentum":
+            # Penny / Momentum Scan
+            # Scan in sub-batches if large
+            batch_size = 50
+            limit_tickers = tickers[:150] # Hard limit for response time
             
-        # Analyze passed candidates deeply
-        for ticker in raw_candidates[:20]: # Cap analysis
-             analysis = analyze_ticker(ticker)
-             if analysis:
-                 candidates.append(analysis)
+            raw_candidates = []
+            for i in range(0, len(limit_tickers), batch_size):
+                batch = limit_tickers[i:i+batch_size]
+                passed = scan_volatility_setup(batch, min_price=0, max_price=5.0)
+                raw_candidates.extend(passed)
+                
+            # Optimized Analysis: Only download what's needed
+            if raw_candidates:
+                import yfinance as yf
+                import pandas as pd
+                
+                # Fetch basic metrics for all candidates in one go
+                # We need at least 2 days to get changePct
+                batch_data = yf.download(raw_candidates[:30], period="5d", group_by='ticker', threads=True, progress=False)
+                
+                for ticker in raw_candidates[:30]:
+                    try:
+                        df = batch_data[ticker] if len(raw_candidates[:30]) > 1 else batch_data
+                        if df.empty or len(df) < 2: continue
+                        
+                        latest = df.iloc[-1]
+                        prev = df.iloc[-2]
+                        price = float(latest['Close'])
+                        change_pct = ((price - float(prev['Close'])) / float(prev['Close'])) * 100
+                        
+                        # Use a lightweight analysis for the table
+                        score = 2 # Base score
+                        signals = []
+                        if price > df['Close'].rolling(window=20).mean().iloc[-1]:
+                            score += 1
+                            signals.append("Above 20-day SMA")
+                        if change_pct > 0:
+                            score += 1
+                            signals.append("Positive Momentum")
+                        
+                        candidates.append({
+                            "ticker": ticker,
+                            "price": check_nan(round(price, 3)),
+                            "changePct": check_nan(round(change_pct, 2)),
+                            "score": score,
+                            "signals": signals[:1], # Keep it light
+                            "verdict": "BULLISH" if score >= 3 else "NEUTRAL"
+                        })
+                    except: continue
     
     # 4. Sorting & Curation
     candidates.sort(key=lambda x: x['score'], reverse=True)

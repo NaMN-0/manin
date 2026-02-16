@@ -35,7 +35,26 @@ export default function PennyStocks() {
   // const [currentLetter, setCurrentLetter] = useState("A"); // Unused
   const [displayLetter, setDisplayLetter] = useState("A");
   const [selectedTicker, setSelectedTicker] = useState(null);
+  const [watchlist, setWatchlist] = useState([]);
   const posthog = usePostHog();
+
+  useEffect(() => {
+    const loadWatchlist = () => {
+      const saved = JSON.parse(localStorage.getItem("ninjaWatchlist") || "[]");
+      setWatchlist(saved.sort((a, b) => b.addedAt - a.addedAt));
+    };
+    loadWatchlist();
+
+    window.addEventListener("watchlistUpdated", loadWatchlist);
+    return () => window.removeEventListener("watchlistUpdated", loadWatchlist);
+  }, []);
+
+  const removeFromWatchlist = (e, ticker) => {
+    e.stopPropagation();
+    const newWatchlist = watchlist.filter((item) => item.ticker !== ticker);
+    localStorage.setItem("ninjaWatchlist", JSON.stringify(newWatchlist));
+    setWatchlist(newWatchlist);
+  };
 
   useEffect(() => {
     posthog?.capture("viewed_smart_discovery");
@@ -149,6 +168,58 @@ export default function PennyStocks() {
       </div>
 
       <div className="container" style={{ position: "relative", zIndex: 1 }}>
+
+        {/* Watchlist Section */}
+        {watchlist.length > 0 && (
+          <div style={{ marginBottom: 40 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
+              <Target size={20} color="var(--primary)" />
+              <h2 style={{ fontSize: 20, fontWeight: 700, margin: 0 }}>Active Targets</h2>
+            </div>
+            <div
+              style={{
+                display: "flex",
+                gap: 16,
+                overflowX: "auto",
+                paddingBottom: 16,
+                scrollbarWidth: "thin",
+              }}
+            >
+              {watchlist.map((item) => (
+                <div
+                  key={item.ticker}
+                  className="glass-card"
+                  onClick={() => setSelectedTicker(item.ticker)}
+                  style={{
+                    minWidth: 200,
+                    padding: 16,
+                    borderRadius: 16,
+                    border: "1px solid rgba(14, 165, 233, 0.3)",
+                    background: "rgba(10, 10, 20, 0.6)",
+                    cursor: "pointer",
+                    position: "relative",
+                  }}
+                >
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
+                    <span style={{ fontWeight: 800, fontSize: 18 }}>{item.ticker}</span>
+                    <button
+                      onClick={(e) => removeFromWatchlist(e, item.ticker)}
+                      style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer", padding: 4 }}
+                    >
+                      ×
+                    </button>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <span style={{ fontSize: 13, color: "var(--text-secondary)" }}>${item.price?.toFixed(2) || "---"}</span>
+                    <span style={{ fontSize: 13, color: (item.changePct >= 0 ? "var(--emerald)" : "var(--crimson)"), fontWeight: 700 }}>
+                      {item.changePct > 0 ? "+" : ""}{item.changePct?.toFixed(2)}%
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
         {/* Sector Radar UI */}
         <div style={{ marginBottom: 40 }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
@@ -716,6 +787,12 @@ export default function PennyStocks() {
                 
                 @media (max-width: 768px) {
                     h1 { font-size: 32px !important; }
+                    h2 { font-size: 18px !important; }
+                    .sector-grid { grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)) !important; }
+                    .table-scroll-wrapper { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+                    .data-table { min-width: 600px; }
+                    .page { padding-top: 60px !important; }
+                    .container { padding: 16px !important; }
                 }
             `}</style>
     </div >

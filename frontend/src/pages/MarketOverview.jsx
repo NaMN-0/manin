@@ -264,7 +264,7 @@ export default function MarketOverview() {
               )}
               {data?.marketOpen && data?.indices?.length > 0
                 ? "Sector Active"
-                : "Sector Inactive"}
+                : "Sector Inactive (Last Session Intel)"}
             </span>
             <button
               className="btn btn-ghost"
@@ -275,6 +275,53 @@ export default function MarketOverview() {
             </button>
           </div>
         </div>
+
+        {/* Sensei's Tactical Commentary */}
+        {data?.commentary && (
+          <div
+            className="glass-card standout-card animate-in-up"
+            style={{
+              marginBottom: 32,
+              padding: '24px 32px',
+              background: 'linear-gradient(90deg, rgba(14, 165, 233, 0.08) 0%, rgba(5, 5, 16, 0.4) 100%)',
+              borderLeft: '4px solid var(--primary)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 24,
+              position: 'relative',
+              overflow: 'hidden'
+            }}
+          >
+            <div style={{ flexShrink: 0 }}>
+              <NinjaMeditating width={60} height={60} />
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={{
+                fontSize: 11,
+                fontWeight: 800,
+                color: 'var(--primary)',
+                textTransform: 'uppercase',
+                letterSpacing: '0.1em',
+                marginBottom: 6
+              }}>
+                Sensei's Tactical Intelligence
+              </div>
+              <p style={{
+                fontSize: 16,
+                lineHeight: 1.6,
+                fontWeight: 500,
+                color: 'var(--text-primary)',
+                margin: 0,
+                fontStyle: 'italic'
+              }}>
+                "{data.commentary}"
+              </p>
+            </div>
+            <div style={{ position: 'absolute', right: -20, bottom: -20, opacity: 0.05 }}>
+              <Brain size={120} />
+            </div>
+          </div>
+        )}
 
         {/* Market Power Level & Index Cards */}
         <div
@@ -752,7 +799,7 @@ export default function MarketOverview() {
                   color: "var(--primary)",
                 }}
               />
-              High Priority Targets (Current Combatants)
+              High Priority Targets {data?.marketOpen ? "(Current Combatants)" : "(Last Session)"}
             </h3>
           </div>
           <div style={{ padding: "20px" }}>

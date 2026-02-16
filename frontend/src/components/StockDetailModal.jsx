@@ -597,20 +597,34 @@ function StockDetailModal({ ticker, initialData, onClose }) {
                   position: "relative",
                   overflow: "hidden",
                 }}
-                onClick={handleStrike}
+                onClick={() => {
+                  handleStrike();
+                  // Add to Watchlist (Frontend Only)
+                  const watchlist = JSON.parse(localStorage.getItem("ninjaWatchlist") || "[]");
+                  if (!watchlist.some(item => item.ticker === ticker)) {
+                    watchlist.push({
+                      ticker,
+                      price: data.price,
+                      changePct: data.changePct,
+                      score: data.score,
+                      addedAt: Date.now()
+                    });
+                    localStorage.setItem("ninjaWatchlist", JSON.stringify(watchlist));
+                    // Dispatch event for PennyStocks to pick up
+                    window.dispatchEvent(new Event("watchlistUpdated"));
+                  }
+                }}
                 disabled={striking || hasStruck}
               >
                 {striking ? (
                   <NinjaLoader variant="fighting" />
                 ) : hasStruck ? (
                   <>
-                    <Award size={20} style={{ marginRight: 8 }} /> MISSION
-                    SUCCESSFUL (+50XP)
+                    <Award size={20} style={{ marginRight: 8 }} /> TARGET LOCKED (+50XP)
                   </>
                 ) : (
                   <>
-                    <Sword size={20} style={{ marginRight: 8 }} /> EXECUTE
-                    SIMULATED STRIKE
+                    <Target size={20} style={{ marginRight: 8 }} /> RADAR LOCK
                     <span
                       style={{
                         position: "absolute",

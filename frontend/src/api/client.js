@@ -8,7 +8,7 @@ const client = axios.create({
   headers: {
     "Content-Type": "application/json",
   },
-  timeout: 15000, // 15s timeout to prevent hanging
+  timeout: 30000, // 30s timeout to prevent hanging during deep scans
 });
 
 // Add a response interceptor to handle common errors
