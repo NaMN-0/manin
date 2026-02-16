@@ -272,68 +272,7 @@ def analyze_ticker(ticker: str) -> Optional[dict]:
         traceback.print_exc()
         return None
 
-# ─── Smart Discovery Engine ──────────────────────────────────────────────────
-
-def scan_volatility_setup(tickers: list, min_price=0.0, max_price=None) -> list:
-    """
-    "Coiled Spring" Logic:
-    1. Strong move in last 3-5 days (>10%).
-    2. Consolidating now (taking a breath).
-    3. Volume is holding up (Accumulation).
-    """
-    try:
-        import yfinance as yf
-        import pandas as pd
-        
-        # Need slightly more data for "recent move" check
-        # Use simple download for batch
-        data = yf.download(tickers, period="10d", group_by='ticker', threads=True, progress=False)
-        candidates = []
-        
-        # Helper implementation for single/multi ticker
-        def check_setup(df, ticker):
-            if df.empty or len(df) < 5: return False
-            
-            latest = df.iloc[-1]
-            price = latest['Close']
-            
-            # Price constraints
-            if price < min_price: return False
-            if max_price and price > max_price: return False
-            
-            # 1. Volatility / Big Move Check
-            pct_changes = df['Close'].pct_change().tail(5)
-            max_gain = pct_changes.max()
-            
-            if max_gain < 0.05: return False # Need some life
-                
-            # 2. Consolidation
-            high_5d = df['High'].tail(5).max()
-            if price < (high_5d * 0.85): # Relaxed to 15% drop allowed for pennies
-                return False
-                
-            # 3. Volume Heat
-            avg_vol = df['Volume'].tail(10).mean()
-            if avg_vol == 0: return False
-            rvol = latest['Volume'] / avg_vol
-            
-            if rvol > 1.2: return True
-            return False
-
-        if len(tickers) == 1:
-            if check_setup(data, tickers[0]):
-                candidates.append(tickers[0])
-        else:
-            for ticker in tickers:
-                try:
-                    df = data[ticker] if len(tickers) > 1 else data
-                    if check_setup(df, ticker):
-                        candidates.append(ticker)
-                except: continue
-        
-        return candidates
-    except Exception:
-        return []
+# ─── Sector Insights ──────────────────────────────────────────────────
 
 def get_sector_accuracy(filter_val: str, filter_type: str = "letter", universe_type="penny") -> dict:
     """
@@ -399,10 +338,12 @@ def get_sector_accuracy(filter_val: str, filter_type: str = "letter", universe_t
 
 def get_smart_batch(letter: Optional[str] = None, sector: Optional[str] = None, universe_type="penny", strategy="momentum") -> dict:
     """
-    Scans a batch of tickers by `letter` OR `sector`.
-    Returns candidates and a few top picks.
+    Optimized Smart Discovery: Consolidated scans and reduced scope for Production stability.
     """
-    # 0. Initialize return vars early to prevent UnboundLocalError
+    import yfinance as yf
+    import pandas as pd
+    import random
+    
     candidates = []
     accuracy_data = {"accuracy": 0}
     filter_val = letter if letter else sector
@@ -411,13 +352,12 @@ def get_smart_batch(letter: Optional[str] = None, sector: Optional[str] = None, 
     if not filter_val:
         return {"candidates": [], "top_picks": [], "accuracy_data": accuracy_data}
 
-    # 1. Get Tickers
+    # 1. Get Tickers (Reduced Scope for Render)
     tickers = []
     if universe_type == "penny":
         try:
             import penny_loader
             all_penny = penny_loader.get_penny_stocks(max_price=5.0) 
-            
             if sector:
                 metadata = penny_loader.get_ticker_metadata()
                 tickers = [t for t in all_penny if metadata.get(t, {}).get('sector') == sector]
@@ -436,57 +376,72 @@ def get_smart_batch(letter: Optional[str] = None, sector: Optional[str] = None, 
             "accuracy_data": accuracy_data
         }
     
-    # 2. Get Accuracy Data
+    # Take up to 50 tickers to ensure we finish within timeout
+    target_tickers = tickers[:50]
+    
+    # 2. Get Accuracy Data (Cached)
     accuracy_data = get_sector_accuracy(filter_val, filter_type, universe_type)
     
-    # 3. Scan
+    # 3. Optimized Consolidated Scan
     if strategy == "momentum":
-        batch_size = 50
-        limit_tickers = tickers[:150]
-        
-        raw_candidates = []
-        for i in range(0, len(limit_tickers), batch_size):
-            batch = limit_tickers[i:i+batch_size]
-            passed = scan_volatility_setup(batch, min_price=0, max_price=5.0)
-            raw_candidates.extend(passed)
+        try:
+            # Single large batch download with explicit period
+            # Period 15d is enough for 10-day SMA and 5-day move checks
+            batch_data = yf.download(target_tickers, period="15d", group_by='ticker', threads=True, progress=False, timeout=10)
             
-        if raw_candidates:
-            import yfinance as yf
-            import pandas as pd
-            
-            # Fetch basic metrics in one batch
-            batch_data = yf.download(raw_candidates[:30], period="5d", group_by='ticker', threads=True, progress=False)
-            
-            for ticker in raw_candidates[:30]:
+            for ticker in target_tickers:
                 try:
-                    df = batch_data[ticker] if len(raw_candidates[:30]) > 1 else batch_data
-                    if df.empty or len(df) < 2: continue
+                    df = batch_data[ticker] if len(target_tickers) > 1 else batch_data
+                    if df.empty or len(df) < 5: continue
                     
                     latest = df.iloc[-1]
                     prev = df.iloc[-2]
                     price = float(latest['Close'])
+                    if price <= 0: continue
+                    
                     change_pct = ((price - float(prev['Close'])) / float(prev['Close'])) * 100
                     
-                    # Score and metrics
+                    # consolidated check (from scan_volatility_setup)
+                    # 1. Volatility check
+                    max_gain_5d = df['Close'].pct_change().tail(5).max()
+                    if max_gain_5d < 0.04: continue # Slightly less strict
+                    
+                    # 2. Consolidation check
+                    high_5d = df['High'].tail(5).max()
+                    if price < (high_5d * 0.80): continue # 20% pullback allowed for pennies
+                    
+                    # 3. Scoring
                     score = 2
                     signals = []
-                    if price > df['Close'].rolling(window=20).mean().iloc[-1]:
-                        score += 1
-                        signals.append("Above 20-day SMA")
-                    if change_pct > 0:
-                        score += 1
-                        signals.append("Positive Momentum")
                     
+                    # Simple SMA-10 for momentum
+                    sma_10 = df['Close'].rolling(window=10).mean().iloc[-1]
+                    if price > sma_10:
+                        score += 1
+                        signals.append("Bullish Trend")
+                    
+                    if change_pct > 2:
+                        score += 1
+                        signals.append("Active Momentum")
+                    
+                    # Relative Volume Estimate
+                    avg_vol = df['Volume'].tail(10).mean()
+                    if avg_vol > 0 and latest['Volume'] > (avg_vol * 1.2):
+                        score += 1
+                        signals.append("Volume Spiking")
+
                     candidates.append({
                         "ticker": ticker,
                         "price": check_nan(round(price, 3)),
                         "changePct": check_nan(round(change_pct, 2)),
                         "score": score,
                         "signals": signals[:1],
-                        "verdict": "BULLISH" if score >= 3 else "NEUTRAL"
+                        "verdict": "BULLISH" if score >= 4 else "NEUTRAL"
                     })
                 except: continue
-    
+        except Exception as e:
+            print(f"Scan optimization error: {e}")
+
     # 4. Sorting & Curation
     if candidates:
         candidates.sort(key=lambda x: x.get('score', 0), reverse=True)
