@@ -16,6 +16,7 @@ import {
   Shield,
   Target,
   Crown,
+  BrainCircuit,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { useGame } from "../context/GameContext";
@@ -318,7 +319,7 @@ export default function MarketOverview() {
               </p>
             </div>
             <div style={{ position: 'absolute', right: -20, bottom: -20, opacity: 0.05 }}>
-              <Brain size={120} />
+              <BrainCircuit size={120} />
             </div>
           </div>
         )}
