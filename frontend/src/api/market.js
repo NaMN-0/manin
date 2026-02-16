@@ -3,12 +3,12 @@ import client from "./client";
 export const marketApi = {
   getOverview: async () => {
     const { data } = await client.get("/api/market/overview");
-    return data;
+    return data.data;
   },
 
   getPennyStocks: async (filters = {}) => {
     const { data } = await client.get("/api/penny/list", { params: filters });
-    return data;
+    return data.data;
   },
 
   // Future: Sensei/Quant integration
@@ -29,6 +29,6 @@ export const marketApi = {
     const { data } = await client.get("/api/market/smart-scan", {
       params: { letter, universe, strategy, sector },
     });
-    return data;
+    return data.data;
   },
 };

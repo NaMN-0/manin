@@ -15,6 +15,12 @@ import {
 import client from "../api/client"; // Use the new API client
 import SmartLoader from "../components/SmartLoader";
 import {
+  NinjaLogic,
+  NinjaZen,
+  NinjaBull,
+  NinjaSpeed,
+} from "../components/NinjaIllustrations";
+import {
   ALL_AVATARS,
   getAvatarById,
   getRandomAvatarId,
@@ -26,21 +32,21 @@ const COMBAT_STYLES = [
     label: "Shadow Walker",
     desc: "The path of stealth. You prefer low-risk entries and silent accumulation.",
     color: "#0ea5e9", // Sky blue
-    icon: "🌑",
+    icon: NinjaZen,
   },
   {
     id: "jonin",
     label: "Iron Fist",
     desc: "The path of discipline. You strike with conviction on high-probability setups.",
     color: "#8b5cf6", // Violet
-    icon: "👊",
+    icon: NinjaBull,
   },
   {
     id: "kage",
     label: "Wind Dancer",
     desc: "The path of momentum. You ride the volatility waves with speed and precision.",
     color: "#f59e0b", // Amber
-    icon: "🌪️",
+    icon: NinjaSpeed,
   },
 ];
 
@@ -581,7 +587,9 @@ export default function Profile() {
                         gap: 8,
                       }}
                     >
-                      <span style={{ fontSize: 18 }}>{style.icon}</span> {style.label}
+                      <span style={{ fontSize: 18, width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        {typeof style.icon === 'string' ? style.icon : <style.icon width={32} height={32} />}
+                      </span> {style.label}
                     </div>
                     <div
                       style={{

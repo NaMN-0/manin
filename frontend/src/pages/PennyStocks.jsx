@@ -104,9 +104,9 @@ export default function PennyStocks() {
       // Wait for animation if it's too fast
       await new Promise((r) => setTimeout(r, 1200));
 
-      if (res && res.data) {
-        // Check res and res.data
-        const data = res.data; // Directly use res.data
+      if (res) {
+        // Now using res directly as marketApi.scanSmartBatch returns data.data
+        const data = res;
         // Backend returns 'letter' as key mostly for compat, but might send 'filter_val'
         const sectorName = data.filter_val || data.letter || randomSector;
         // setCurrentLetter(sectorName); // Unused
@@ -253,11 +253,11 @@ export default function PennyStocks() {
                       // Let's call a new separate function or refactor fetchNextBatch.
                       marketApi.scanSmartBatch(null, 'penny', 'momentum', sector)
                         .then(res => {
-                          if (res.data) {
-                            setStocks(res.data.candidates || []);
-                            setTopPicks(res.data.top_picks || []);
-                            setAccuracyData(res.data.accuracy_data || null);
-                            if (res.data.candidates.length > 0) {
+                          if (res) {
+                            setStocks(res.candidates || []);
+                            setTopPicks(res.top_picks || []);
+                            setAccuracyData(res.accuracy_data || null);
+                            if (res.candidates.length > 0) {
                               addXp(10, `Scanned Sector: ${sector}`);
                             }
                           }
