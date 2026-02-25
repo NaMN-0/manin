@@ -130,6 +130,17 @@ export default function ProGate({
     );
   }
 
+  async function handleBypass() {
+    try {
+      await api.post("/api/payments/trial/consume");
+      await checkProStatus();
+      window.location.reload();
+    } catch (err) {
+      console.error("Trial bypass failed", err);
+      alert("Failed to activate trial");
+    }
+  }
+
   async function handleSubscribe() {
     // ... (existing subscribe logic)
     setLoading(true);
@@ -395,8 +406,6 @@ export default function ProGate({
                 </>
               )}
             </button>
-
-
           </div>
 
           <p

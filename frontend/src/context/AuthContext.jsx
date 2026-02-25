@@ -54,7 +54,7 @@ export function AuthProvider({ children }) {
     try {
       // Create a timeout promise to prevent hanging indefinitely
       const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error("Session fetch timeout")), 5000)
+        setTimeout(() => reject(new Error("Session fetch timeout")), 5000),
       );
 
       const sessionPromise = supabase.auth.getSession();

@@ -600,16 +600,21 @@ function StockDetailModal({ ticker, initialData, onClose }) {
                 onClick={() => {
                   handleStrike();
                   // Add to Watchlist (Frontend Only)
-                  const watchlist = JSON.parse(localStorage.getItem("ninjaWatchlist") || "[]");
-                  if (!watchlist.some(item => item.ticker === ticker)) {
+                  const watchlist = JSON.parse(
+                    localStorage.getItem("ninjaWatchlist") || "[]",
+                  );
+                  if (!watchlist.some((item) => item.ticker === ticker)) {
                     watchlist.push({
                       ticker,
                       price: data.price,
                       changePct: data.changePct,
                       score: data.score,
-                      addedAt: Date.now()
+                      addedAt: Date.now(),
                     });
-                    localStorage.setItem("ninjaWatchlist", JSON.stringify(watchlist));
+                    localStorage.setItem(
+                      "ninjaWatchlist",
+                      JSON.stringify(watchlist),
+                    );
                     // Dispatch event for PennyStocks to pick up
                     window.dispatchEvent(new Event("watchlistUpdated"));
                   }
@@ -620,7 +625,8 @@ function StockDetailModal({ ticker, initialData, onClose }) {
                   <NinjaLoader variant="fighting" />
                 ) : hasStruck ? (
                   <>
-                    <Award size={20} style={{ marginRight: 8 }} /> TARGET LOCKED (+50XP)
+                    <Award size={20} style={{ marginRight: 8 }} /> TARGET LOCKED
+                    (+50XP)
                   </>
                 ) : (
                   <>

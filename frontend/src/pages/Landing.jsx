@@ -213,7 +213,7 @@ export default function Landing() {
       if (!containerRef.current) return;
       const { scrollTop, scrollHeight, clientHeight } = containerRef.current;
       const progress = scrollTop / (scrollHeight - clientHeight);
-      setCurrentScene(Math.min(5, Math.floor(progress * 6)));
+      setCurrentScene(Math.min(6, Math.floor(progress * 7)));
     };
     const el = containerRef.current;
     if (el) el.addEventListener("scroll", handleScroll);
@@ -258,6 +258,11 @@ export default function Landing() {
       },
       {
         bg: "#0f172a",
+        manin: "dash",
+        text: "See what other Shadow Masters have achieved using the Kage Intelligence Hub.",
+      },
+      {
+        bg: "#050510",
         manin: "victory",
         text: "Your training begins now. Are you ready to become a Shadow Master?",
       },
@@ -794,7 +799,119 @@ export default function Landing() {
           </div>
         </ScrollSection>
 
-        {/* ═══ SCENE 6: CTA ═══ */}
+        {/* ═══ SCENE 6: SOCIAL PROOF ═══ */}
+        <ScrollSection>
+          <div
+            style={{
+              maxWidth: 1000,
+              width: "100%",
+              textAlign: "center",
+              position: "relative",
+              zIndex: 10,
+            }}
+          >
+            <h2
+              style={{
+                fontSize: "clamp(28px, 4vw, 48px)",
+                fontWeight: 900,
+                marginBottom: 48,
+                lineHeight: 1.1,
+              }}
+            >
+              Wall of <span style={{ color: "#38bdf8" }}>Shadow Masters</span>
+            </h2>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+                gap: 24,
+                textAlign: "left",
+              }}
+            >
+              {[
+                {
+                  name: "Alex T.",
+                  rank: "Elite Operative",
+                  text: "The Sensei AI reasoning is next level. Found two major penny breakouts before the crowd even woke up.",
+                },
+                {
+                  name: "Jordan K.",
+                  rank: "Master Mentor",
+                  text: "Finally an intuitive interface. The gamification keeps me disciplined, which is where I failed before.",
+                },
+                {
+                  name: "Sarah M.",
+                  rank: "Initiate Scout",
+                  text: "The free tier alone provided more actionable intelligence than my $100/mo discord subscription.",
+                },
+              ].map((testimonial, i) => (
+                <div
+                  key={i}
+                  style={{
+                    background: "rgba(15,23,42,0.6)",
+                    border: "1px solid rgba(14,165,233,0.15)",
+                    borderRadius: 16,
+                    padding: 24,
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 12,
+                  }}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      gap: 4,
+                      color: "#f59e0b",
+                      fontSize: 20,
+                    }}
+                  >
+                    ★★★★★
+                  </div>
+                  <p
+                    style={{
+                      color: "#cbd5e1",
+                      fontSize: 15,
+                      lineHeight: 1.6,
+                      fontStyle: "italic",
+                      flex: 1,
+                    }}
+                  >
+                    "{testimonial.text}"
+                  </p>
+                  <div
+                    style={{
+                      borderTop: "1px solid rgba(255,255,255,0.05)",
+                      paddingTop: 12,
+                      marginTop: 4,
+                    }}
+                  >
+                    <p
+                      style={{ fontWeight: 700, color: "white", fontSize: 14 }}
+                    >
+                      {testimonial.name}
+                    </p>
+                    <p style={{ color: "#94a3b8", fontSize: 12 }}>
+                      {testimonial.rank}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div
+              style={{
+                marginTop: 40,
+                color: "#94a3b8",
+                fontSize: 14,
+                fontWeight: 600,
+                letterSpacing: "0.05em",
+              }}
+            >
+              JOIN 10,000+ TRADERS IN THE ACADEMY
+            </div>
+          </div>
+        </ScrollSection>
+
+        {/* ═══ SCENE 7: CTA ═══ */}
         <ScrollSection
           style={{ padding: 0, display: "flex", flexDirection: "column" }}
         >
@@ -834,11 +951,11 @@ export default function Landing() {
                 lineHeight: 1.6,
                 marginBottom: 40,
                 maxWidth: 480,
-                margin: "0 auto 40px",
+                margin: "0 auto 16px",
               }}
             >
-              Join thousands of traders using AI to gain a decisive edge. Free
-              scrolls available.
+              Your first mission awaits. Sign up now and get your first week of
+              AI signals completely free.
             </p>
 
             <button
@@ -858,10 +975,14 @@ export default function Landing() {
                 gap: 12,
                 boxShadow: "0 8px 32px rgba(14,165,233,0.35)",
                 transition: "all 0.3s",
+                marginBottom: 16,
               }}
             >
               Start Training <ArrowRight size={20} />
             </button>
+            <p style={{ color: "#64748b", fontSize: 14 }}>
+              No credit card required • Free Initiate Access
+            </p>
           </div>
 
           <div

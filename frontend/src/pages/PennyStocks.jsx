@@ -147,7 +147,13 @@ export default function PennyStocks() {
           paddingTop: 80,
         }}
       >
-        <NinjaTrainingLoader text={isCracking ? "Deciphering Sector Codes..." : "Scanning Global Battlefronts..."} />
+        <NinjaTrainingLoader
+          text={
+            isCracking
+              ? "Deciphering Sector Codes..."
+              : "Scanning Global Battlefronts..."
+          }
+        />
       </div>
     );
   }
@@ -169,13 +175,21 @@ export default function PennyStocks() {
       </div>
 
       <div className="container" style={{ position: "relative", zIndex: 1 }}>
-
         {/* Watchlist Section */}
         {watchlist.length > 0 && (
           <div style={{ marginBottom: 40 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
+                marginBottom: 20,
+              }}
+            >
               <Target size={20} color="var(--primary)" />
-              <h2 style={{ fontSize: 20, fontWeight: 700, margin: 0 }}>Active Targets</h2>
+              <h2 style={{ fontSize: 20, fontWeight: 700, margin: 0 }}>
+                Active Targets
+              </h2>
             </div>
             <div
               style={{
@@ -201,19 +215,54 @@ export default function PennyStocks() {
                     position: "relative",
                   }}
                 >
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
-                    <span style={{ fontWeight: 800, fontSize: 18 }}>{item.ticker}</span>
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "flex-start",
+                      marginBottom: 8,
+                    }}
+                  >
+                    <span style={{ fontWeight: 800, fontSize: 18 }}>
+                      {item.ticker}
+                    </span>
                     <button
                       onClick={(e) => removeFromWatchlist(e, item.ticker)}
-                      style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer", padding: 4 }}
+                      style={{
+                        background: "transparent",
+                        border: "none",
+                        color: "var(--text-muted)",
+                        cursor: "pointer",
+                        padding: 4,
+                      }}
                     >
                       ×
                     </button>
                   </div>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <span style={{ fontSize: 13, color: "var(--text-secondary)" }}>${item.price?.toFixed(2) || "---"}</span>
-                    <span style={{ fontSize: 13, color: (item.changePct >= 0 ? "var(--emerald)" : "var(--crimson)"), fontWeight: 700 }}>
-                      {item.changePct > 0 ? "+" : ""}{item.changePct?.toFixed(2)}%
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                    }}
+                  >
+                    <span
+                      style={{ fontSize: 13, color: "var(--text-secondary)" }}
+                    >
+                      ${item.price?.toFixed(2) || "---"}
+                    </span>
+                    <span
+                      style={{
+                        fontSize: 13,
+                        color:
+                          item.changePct >= 0
+                            ? "var(--emerald)"
+                            : "var(--crimson)",
+                        fontWeight: 700,
+                      }}
+                    >
+                      {item.changePct > 0 ? "+" : ""}
+                      {item.changePct?.toFixed(2)}%
                     </span>
                   </div>
                 </div>
@@ -223,21 +272,56 @@ export default function PennyStocks() {
         )}
         {/* Sector Radar UI */}
         <div style={{ marginBottom: 40 }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
-            <h2 style={{ fontSize: 20, fontWeight: 700, display: "flex", alignItems: "center", gap: 10 }}>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              marginBottom: 20,
+            }}
+          >
+            <h2
+              style={{
+                fontSize: 20,
+                fontWeight: 700,
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
+              }}
+            >
               <div className="radar-pulse"></div> Sector Radar
             </h2>
-            <div style={{ fontSize: 12, color: "var(--text-muted)", fontFamily: "monospace" }}>
+            <div
+              style={{
+                fontSize: 12,
+                color: "var(--text-muted)",
+                fontFamily: "monospace",
+              }}
+            >
               SCANNING PROTOCOL: ACTIVE
             </div>
           </div>
 
-          <div className="sector-grid" style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))",
-            gap: 12
-          }}>
-            {["Technology", "Healthcare", "Finance", "Energy", "Consumer Discretionary", "Materials", "Industrials", "Real Estate", "Utilities", "Telecommunications"].map((sector) => {
+          <div
+            className="sector-grid"
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))",
+              gap: 12,
+            }}
+          >
+            {[
+              "Technology",
+              "Healthcare",
+              "Finance",
+              "Energy",
+              "Consumer Discretionary",
+              "Materials",
+              "Industrials",
+              "Real Estate",
+              "Utilities",
+              "Telecommunications",
+            ].map((sector) => {
               const isActive = displayLetter === sector;
               return (
                 <button
@@ -248,12 +332,13 @@ export default function PennyStocks() {
                       setStocks([]); // Clear current
                       setTopPicks([]);
                       setDisplayLetter(sector);
-                      // We need to call the fetch logic. 
-                      // Ideally refactor fetchNextBatch to take an arg, 
+                      // We need to call the fetch logic.
+                      // Ideally refactor fetchNextBatch to take an arg,
                       // but for now relying on effect or explicit call.
                       // Let's call a new separate function or refactor fetchNextBatch.
-                      marketApi.scanSmartBatch(null, 'penny', 'momentum', sector)
-                        .then(res => {
+                      marketApi
+                        .scanSmartBatch(null, "penny", "momentum", sector)
+                        .then((res) => {
                           if (res) {
                             setStocks(res.candidates || []);
                             setTopPicks(res.top_picks || []);
@@ -263,7 +348,7 @@ export default function PennyStocks() {
                             }
                           }
                         })
-                        .catch(err => {
+                        .catch((err) => {
                           console.error(err);
                           setError("Sector Scan Failed");
                         });
@@ -273,8 +358,12 @@ export default function PennyStocks() {
                   style={{
                     padding: "12px 8px",
                     borderRadius: 12,
-                    background: isActive ? "rgba(14, 165, 233, 0.15)" : "rgba(255,255,255,0.03)",
-                    border: isActive ? "1px solid var(--primary)" : "1px solid rgba(255,255,255,0.1)",
+                    background: isActive
+                      ? "rgba(14, 165, 233, 0.15)"
+                      : "rgba(255,255,255,0.03)",
+                    border: isActive
+                      ? "1px solid var(--primary)"
+                      : "1px solid rgba(255,255,255,0.1)",
                     color: isActive ? "white" : "var(--text-secondary)",
                     fontSize: 13,
                     fontWeight: isActive ? 700 : 500,
@@ -282,20 +371,25 @@ export default function PennyStocks() {
                     textAlign: "center",
                     transition: "all 0.2s ease",
                     position: "relative",
-                    overflow: "hidden"
+                    overflow: "hidden",
                   }}
                 >
                   {isActive && (
-                    <div style={{
-                      position: "absolute",
-                      bottom: 0, left: 0, width: "100%", height: 3,
-                      background: "var(--primary)",
-                      boxShadow: "0 0 10px var(--primary)"
-                    }} />
+                    <div
+                      style={{
+                        position: "absolute",
+                        bottom: 0,
+                        left: 0,
+                        width: "100%",
+                        height: 3,
+                        background: "var(--primary)",
+                        boxShadow: "0 0 10px var(--primary)",
+                      }}
+                    />
                   )}
                   {sector}
                 </button>
-              )
+              );
             })}
           </div>
         </div>
@@ -763,14 +857,12 @@ export default function PennyStocks() {
         )}
       </div>
 
-      {
-        selectedTicker && (
-          <StockDetailModal
-            ticker={selectedTicker}
-            onClose={() => setSelectedTicker(null)}
-          />
-        )
-      }
+      {selectedTicker && (
+        <StockDetailModal
+          ticker={selectedTicker}
+          onClose={() => setSelectedTicker(null)}
+        />
+      )}
 
       <style>{`
                 @keyframes flicker {
@@ -796,6 +888,6 @@ export default function PennyStocks() {
                     .container { padding: 16px !important; }
                 }
             `}</style>
-    </div >
+    </div>
   );
 }

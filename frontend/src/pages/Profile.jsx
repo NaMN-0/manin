@@ -587,9 +587,23 @@ export default function Profile() {
                         gap: 8,
                       }}
                     >
-                      <span style={{ fontSize: 18, width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        {typeof style.icon === 'string' ? style.icon : <style.icon width={32} height={32} />}
-                      </span> {style.label}
+                      <span
+                        style={{
+                          fontSize: 18,
+                          width: 32,
+                          height: 32,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                        }}
+                      >
+                        {typeof style.icon === "string" ? (
+                          style.icon
+                        ) : (
+                          <style.icon width={32} height={32} />
+                        )}
+                      </span>{" "}
+                      {style.label}
                     </div>
                     <div
                       style={{
