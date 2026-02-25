@@ -291,7 +291,7 @@ def run_full_scan(limit: int = 100) -> list:
         # 1. Batch History Download
         try:
             # period="6mo" for technicals
-            batch_data = yf.download(chunk_targets, period="6mo", group_by="ticker", threads=True, progress=False, timeout=20)
+            batch_data = yf.download(chunk_targets, period="6mo", group_by="ticker", threads=False, progress=False, timeout=20)
         except Exception as e:
             logger.error(f"Batch history download failed: {e}")
             batch_data = None
@@ -408,7 +408,7 @@ def run_batch_scan(limit: int = 10, offset: int = 0) -> list:
         import yfinance as yf
         # 1. Batch History
         try:
-             batch_data = yf.download(filtered_batch, period="6mo", group_by="ticker", threads=True, progress=False, timeout=15)
+             batch_data = yf.download(filtered_batch, period="6mo", group_by="ticker", threads=False, progress=False, timeout=15)
         except Exception:
              batch_data = None
         

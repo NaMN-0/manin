@@ -387,7 +387,7 @@ def get_smart_batch(letter: Optional[str] = None, sector: Optional[str] = None, 
         try:
             # Single large batch download with explicit period
             # Period 15d is enough for 10-day SMA and 5-day move checks
-            batch_data = yf.download(target_tickers, period="15d", group_by='ticker', threads=True, progress=False, timeout=10)
+            batch_data = yf.download(target_tickers, period="15d", group_by='ticker', threads=False, progress=False, timeout=10)
             
             for ticker in target_tickers:
                 try:

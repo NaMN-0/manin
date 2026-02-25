@@ -113,7 +113,7 @@ def get_penny_stocks(max_price=5.0):
         print(f"Processing batch {i} to {i+len(batch_symbols)}...")
         try:
             # Download only latest price
-            data = yf.download(batch_symbols, period="1d", group_by='ticker', threads=True, progress=False)
+            data = yf.download(batch_symbols, period="1d", group_by='ticker', threads=False, progress=False)
             
             # Helper to extract price safely
             def get_price(ticker_data):
