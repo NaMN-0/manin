@@ -13,6 +13,7 @@ import ProGate from "./components/ProGate";
 import Onboarding from "./pages/Onboarding";
 import PaperTrading from "./pages/PaperTrading";
 import Profile from "./pages/Profile";
+import AdminDashboard from "./pages/AdminDashboard";
 import LevelUpModal from "./components/LevelUpModal";
 import { useGame } from "./context/GameContext";
 import LifetimeBanner from "./components/LifetimeBanner";
@@ -102,6 +103,14 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <Profile />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin"
+                element={
+                  <ProtectedRoute>
+                    <AdminDashboard />
                   </ProtectedRoute>
                 }
               />

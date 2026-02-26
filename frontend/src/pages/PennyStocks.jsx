@@ -329,13 +329,12 @@ export default function PennyStocks() {
                   onClick={() => {
                     if (!loading && displayLetter !== sector) {
                       // Manually trigger fetch for this sector
+                      setLoading(true);
+                      setIsCracking(true);
                       setStocks([]); // Clear current
                       setTopPicks([]);
                       setDisplayLetter(sector);
-                      // We need to call the fetch logic.
-                      // Ideally refactor fetchNextBatch to take an arg,
-                      // but for now relying on effect or explicit call.
-                      // Let's call a new separate function or refactor fetchNextBatch.
+
                       marketApi
                         .scanSmartBatch(null, "penny", "momentum", sector)
                         .then((res) => {
@@ -351,6 +350,10 @@ export default function PennyStocks() {
                         .catch((err) => {
                           console.error(err);
                           setError("Sector Scan Failed");
+                        })
+                        .finally(() => {
+                          setLoading(false);
+                          setIsCracking(false);
                         });
                     }
                   }}

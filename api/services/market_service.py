@@ -357,6 +357,7 @@ def get_smart_batch(letter: Optional[str] = None, sector: Optional[str] = None, 
     if universe_type == "penny":
         try:
             import penny_loader
+            # Use max_age check or just get cached if possible
             all_penny = penny_loader.get_penny_stocks(max_price=5.0) 
             if sector:
                 metadata = penny_loader.get_ticker_metadata()
@@ -387,7 +388,7 @@ def get_smart_batch(letter: Optional[str] = None, sector: Optional[str] = None, 
         try:
             # Single large batch download with explicit period
             # Period 15d is enough for 10-day SMA and 5-day move checks
-            batch_data = yf.download(target_tickers, period="15d", group_by='ticker', threads=False, progress=False, timeout=10)
+            batch_data = yf.download(target_tickers, period="15d", group_by='ticker', threads=False, progress=False, timeout=15)
             
             for ticker in target_tickers:
                 try:

@@ -36,7 +36,7 @@ def fetch_nasdaq_tickers_robust():
         print("Fetching via NASDAQ API...")
         # This URL returns all stocks on NASDAQ
         url = "https://api.nasdaq.com/api/screener/stocks?tableonly=true&limit=25&offset=0&download=true"
-        response = requests.get(url, headers=HEADERS)
+        response = requests.get(url, headers=HEADERS, timeout=15)
         response.raise_for_status()
         data = response.json()
         
@@ -112,8 +112,8 @@ def get_penny_stocks(max_price=5.0):
         
         print(f"Processing batch {i} to {i+len(batch_symbols)}...")
         try:
-            # Download only latest price
-            data = yf.download(batch_symbols, period="1d", group_by='ticker', threads=False, progress=False)
+            # Download only latest price with strict timeout
+            data = yf.download(batch_symbols, period="1d", group_by='ticker', threads=False, progress=False, timeout=10)
             
             # Helper to extract price safely
             def get_price(ticker_data):

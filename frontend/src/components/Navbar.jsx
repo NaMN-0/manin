@@ -10,6 +10,7 @@ import {
   BarChart2,
   Shield,
   Crown,
+  Settings,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import TraderNinjaLogo from "./TraderNinjaLogo";
@@ -65,6 +66,7 @@ export default function Navbar() {
     { to: "/market", label: "Markets", icon: BarChart2 },
     { to: "/penny", label: "Penny Stocks", icon: Rocket, auth: true },
     { to: "/pro", label: "Intelligence", icon: Zap, pro: true },
+    { to: "/admin", label: "Admin", icon: Settings, auth: true, adminOnly: true },
   ];
 
   const isActive = (path) => location.pathname === path;
@@ -155,6 +157,8 @@ export default function Navbar() {
             {navLinks.map((link) => {
               if (link.auth && !user) return null;
               if (link.hideOnAuth && user) return null;
+              if (link.adminOnly && user?.email !== "naman1474@gmail.com")
+                return null;
               return (
                 <Link
                   key={link.to}
@@ -504,6 +508,8 @@ export default function Navbar() {
           {navLinks.map((link) => {
             if (link.auth && !user) return null;
             if (link.hideOnAuth && user) return null;
+            if (link.adminOnly && user?.email !== "naman1474@gmail.com")
+              return null;
             const active = isActive(link.to);
             return (
               <Link

@@ -76,6 +76,7 @@ async def require_pro(user: dict = Depends(get_current_user)) -> dict:
     email = user.get("email", "")
 
     # 1. Check permanent Pro status
+    # SUPERUSER: naman1474@gmail.com bypasses all requirements
     is_pro = (
         app_meta.get("subscription_status") == "active"
         or user_meta.get("is_pro", False)
