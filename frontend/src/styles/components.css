@@ -201,8 +201,16 @@
   }
 }
 
+/* ─── Hide Manin Companion on Mobile ─────────────────────────────────────── */
+@media (max-width: 768px) {
+  .manin-companion {
+    display: none !important;
+  }
+}
+
 /* ─── Responsive Component Tweaks ────────────────────────────────────────── */
 @media (max-width: 768px) {
+
   /* Cards */
   .glass-card {
     padding: 16px;
