@@ -378,7 +378,8 @@ def get_smart_batch(letter: Optional[str] = None, sector: Optional[str] = None, 
         }
     
     # Take up to 50 tickers to ensure we finish within timeout
-    target_tickers = tickers[:50]
+    # Take up to 30 tickers to ensure we finish within timeout on free tier
+    target_tickers = tickers[:30]
     
     # 2. Get Accuracy Data (Cached)
     accuracy_data = get_sector_accuracy(filter_val, filter_type, universe_type)
@@ -388,7 +389,7 @@ def get_smart_batch(letter: Optional[str] = None, sector: Optional[str] = None, 
         try:
             # Single large batch download with explicit period
             # Period 15d is enough for 10-day SMA and 5-day move checks
-            batch_data = yf.download(target_tickers, period="15d", group_by='ticker', threads=False, progress=False, timeout=15)
+            batch_data = yf.download(target_tickers, period="15d", group_by='ticker', threads=True, progress=False, timeout=12)
             
             for ticker in target_tickers:
                 try:

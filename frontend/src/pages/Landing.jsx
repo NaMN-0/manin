@@ -121,8 +121,8 @@ const ManinCompanion = ({ state, message }) => {
       className="manin-companion"
       style={{
         position: "fixed",
-        bottom: 40,
-        right: 40,
+        bottom: window.innerWidth < 768 ? 20 : 40,
+        right: window.innerWidth < 768 ? 20 : 40,
         zIndex: 60,
         pointerEvents: "none",
         transition: "all 0.5s",
@@ -139,8 +139,8 @@ const ManinCompanion = ({ state, message }) => {
             background: "rgba(15,23,42,0.9)",
             border: "1px solid #0ea5e9",
             borderRadius: 16,
-            padding: 24,
-            width: 260,
+            padding: window.innerWidth < 768 ? 16 : 24,
+            width: window.innerWidth < 768 ? 200 : 260,
             backdropFilter: "blur(12px)",
             boxShadow: "0 0 30px rgba(14,165,233,0.3)",
             pointerEvents: "auto",
@@ -186,8 +186,8 @@ const ManinCompanion = ({ state, message }) => {
       )}
       <div
         style={{
-          width: 120,
-          height: 120,
+          width: window.innerWidth < 768 ? 80 : 120,
+          height: window.innerWidth < 768 ? 80 : 120,
           filter: "drop-shadow(0 0 20px rgba(14,165,233,0.4))",
         }}
       >

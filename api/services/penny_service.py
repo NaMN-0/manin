@@ -21,6 +21,9 @@ warnings.filterwarnings("ignore")
 
 logger = logging.getLogger(__name__)
 
+# Render Free Tier Safety Limits
+MAX_UNIVERSE_SIZE = int(os.environ.get("MAX_UNIVERSE_SIZE", 1000))
+
 # ─── Robust Helpers ──────────────────────────────────────────────────────────
 
 @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10),
@@ -113,6 +116,11 @@ def get_universe() -> list:
                 if "/" in t:
                     t = t.replace("/", "-")
                 sanitized.append(t)
+            
+            # Limit universe size for backend stability
+            if len(sanitized) > MAX_UNIVERSE_SIZE:
+                logger.warning(f"Universe size ({len(sanitized)}) exceeds MAX_UNIVERSE_SIZE ({MAX_UNIVERSE_SIZE}). Truncating.")
+                sanitized = sanitized[:MAX_UNIVERSE_SIZE]
             
             CacheService.set("penny_universe_v2", sanitized)
             return sanitized

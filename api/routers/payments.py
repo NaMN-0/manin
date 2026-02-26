@@ -168,6 +168,7 @@ async def subscription_status(user: dict = Depends(get_current_user)):
     plan = app_meta.get("plan", "free")
     if email == "naman1474@gmail.com":
         plan = "lifetime_founder"
+        is_pro = True # Explicitly ensure is_pro is true for superuser
 
     has_used_trial = False
     if not is_pro and user_id:

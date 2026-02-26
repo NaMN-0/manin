@@ -15,6 +15,7 @@ import PaperTrading from "./pages/PaperTrading";
 import Profile from "./pages/Profile";
 import AdminDashboard from "./pages/AdminDashboard";
 import LevelUpModal from "./components/LevelUpModal";
+import MaintenanceBanner from "./components/MaintenanceBanner";
 import { useGame } from "./context/GameContext";
 import LifetimeBanner from "./components/LifetimeBanner";
 // import ErrorDisplay from "./components/ErrorDisplay"; // Removed unused import
@@ -52,7 +53,8 @@ function App() {
       <AuthProvider>
         <GameProvider>
           <Toaster richColors position="top-center" theme="dark" />
-          <ScrollToTop /> {/* Add ScrollToTop here */}
+          <ScrollToTop />
+          <MaintenanceBanner />
           <LifetimeBanner />
           <Navbar />
           <Routes>

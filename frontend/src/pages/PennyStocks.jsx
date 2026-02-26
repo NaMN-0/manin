@@ -33,6 +33,7 @@ export default function PennyStocks() {
   const [loading, setLoading] = useState(true);
   const [isCracking, setIsCracking] = useState(false);
   const [error, setError] = useState(null);
+  const [scanTimeout, setScanTimeout] = useState(false);
   // const [currentLetter, setCurrentLetter] = useState("A"); // Unused
   const [displayLetter, setDisplayLetter] = useState("A");
   const [selectedTicker, setSelectedTicker] = useState(null);
@@ -66,6 +67,12 @@ export default function PennyStocks() {
     if (isCracking) return;
     setLoading(true);
     setError(null);
+    setScanTimeout(false);
+
+    // Safety timeout: if it takes more than 15s, show a retry button
+    const timeoutId = setTimeout(() => {
+      setScanTimeout(true);
+    }, 15000);
 
     // 1. Initiate Code Cracker Animation
     setIsCracking(true);
@@ -130,6 +137,7 @@ export default function PennyStocks() {
       console.error("Fetch error:", error);
       setError(error.response?.data?.detail || "Failed to crack sector code.");
     } finally {
+      clearTimeout(timeoutId); // Clear the timeout
       setLoading(false);
       setIsCracking(false);
     }
@@ -147,13 +155,23 @@ export default function PennyStocks() {
           paddingTop: 80,
         }}
       >
-        <NinjaTrainingLoader
-          text={
-            isCracking
-              ? "Deciphering Sector Codes..."
-              : "Scanning Global Battlefronts..."
-          }
-        />
+        <div className="text-center py-20">
+          <NinjaTrainingLoader />
+          <p className="mt-4 text-text-muted animate-pulse">
+            {isCracking ? `Cracking Sector: ${displayLetter}...` : "Scanning deep liquidity pools..."}
+          </p>
+          {scanTimeout && (
+            <div className="mt-8 p-4 border border-amber-900/30 bg-amber-950/20 rounded-lg max-w-md mx-auto">
+              <p className="text-amber-500 mb-4 text-sm">Scan is taking longer than expected due to high traffic.</p>
+              <button
+                onClick={fetchNextBatch}
+                className="btn btn-amber py-2 px-6 text-xs"
+              >
+                Force Retry Scan
+              </button>
+            </div>
+          )}
+        </div>
       </div>
     );
   }

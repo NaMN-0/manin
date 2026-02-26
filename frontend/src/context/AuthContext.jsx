@@ -105,7 +105,7 @@ export function AuthProvider({ children }) {
             window.history.replaceState(null, "", window.location.pathname);
           }
           if (location.pathname === "/" || location.pathname === "/login") {
-            navigate("/penny", { replace: true });
+            navigate("/welcome", { replace: true });
           }
         }
       } else if (event === "SIGNED_OUT") {
