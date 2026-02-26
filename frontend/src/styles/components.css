@@ -201,10 +201,21 @@
   }
 }
 
-/* ─── Hide Manin Companion on Mobile ─────────────────────────────────────── */
+/* ─── Responsive Component Tweaks ────────────────────────────────────────── */
 @media (max-width: 768px) {
   .manin-companion {
-    display: none !important;
+    bottom: 20px !important;
+    right: 20px !important;
+  }
+
+  .manin-companion>div:last-child {
+    width: 64px !important;
+    height: 64px !important;
+  }
+
+  .manin-companion [style*="width: 260px"] {
+    width: 180px !important;
+    padding: 12px !important;
   }
 }
 

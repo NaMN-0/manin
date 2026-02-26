@@ -126,7 +126,7 @@ const ManinCompanion = ({ state, message }) => {
         zIndex: 60,
         pointerEvents: "none",
         transition: "all 0.5s",
-        transform: state === "dash" ? "translateX(-30px) scale(1.1)" : "none",
+        transform: state === "dash" ? "translateX(-20px) scale(1.05)" : "none",
       }}
     >
       {visibleMessage && (

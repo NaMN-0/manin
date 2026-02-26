@@ -13,13 +13,15 @@ export default function AdminDashboard() {
     const fetchData = async () => {
         setRefreshing(true);
         try {
-            const [logsRes, statsRes] = await Promise.all([
+            const [logsRes, statsRes, activityRes] = await Promise.all([
                 adminApi.getLogs(200),
-                adminApi.getStats()
+                adminApi.getStats(),
+                adminApi.getActivity(20)
             ]);
 
             if (logsRes.status === 'ok') setLogs(logsRes.data);
             if (statsRes.status === 'ok') setStats(statsRes.data);
+            if (activityRes.status === 'ok') setActivity(activityRes.data);
         } catch (err) {
             console.error("Admin fetch error:", err);
         } finally {
@@ -142,6 +144,47 @@ export default function AdminDashboard() {
                             );
                         })}
                         <div ref={logEndRef} />
+                    </div>
+                </div>
+
+                {/* Recent Activity Feed */}
+                <div className="glass-card" style={{ marginTop: 32, padding: 0, overflow: 'hidden', border: '1px solid var(--ninja-border)' }}>
+                    <div style={{
+                        padding: '16px 24px',
+                        background: 'rgba(255,255,255,0.03)',
+                        borderBottom: '1px solid var(--ninja-border)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 12
+                    }}>
+                        <Users size={18} color="var(--primary)" />
+                        <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>Active Missions Trail</h3>
+                    </div>
+                    <div className="table-scroll-wrapper">
+                        <table className="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Ninja</th>
+                                    <th>Rank</th>
+                                    <th>Last Strike</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {activity.map((user, i) => (
+                                    <tr key={i}>
+                                        <td style={{ fontWeight: 700 }}>{user.email}</td>
+                                        <td>
+                                            <span className={`badge ${user.is_pro ? 'badge-pro' : 'badge-amber'}`}>
+                                                {user.is_pro ? 'Elite Operative' : 'Initiate'}
+                                            </span>
+                                        </td>
+                                        <td style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                                            {new Date(user.updated_at).toLocaleString()}
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
                     </div>
                 </div>
 

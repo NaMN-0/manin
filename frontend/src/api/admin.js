@@ -9,5 +9,11 @@ export const adminApi = {
     getStats: async () => {
         const { data } = await client.get("/api/admin/stats");
         return data;
-    }
+    },
+    getActivity: async (limit = 20) => {
+        const { data } = await client.get("/api/admin/activity", {
+            params: { limit },
+        });
+        return data;
+    },
 };

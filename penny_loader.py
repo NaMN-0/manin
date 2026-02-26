@@ -81,7 +81,7 @@ def get_penny_stocks(max_price=5.0):
             with open(TICKER_FILE, "r") as f:
                 data = json.load(f)
                 timestamp = datetime.datetime.fromisoformat(data.get("timestamp", "2000-01-01T00:00:00"))
-                if datetime.datetime.now() - timestamp < datetime.timedelta(hours=24):
+                if datetime.datetime.now() - timestamp < datetime.timedelta(hours=48):
                     print(f"Loaded {len(data['tickers'])} penny tickers from cache.")
                     return data["tickers"]
         except Exception:

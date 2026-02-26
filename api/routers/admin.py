@@ -74,3 +74,27 @@ async def get_admin_stats(_user: dict = Depends(require_admin)):
             }
         except Exception as e:
             raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/activity")
+async def get_admin_activity(limit: int = 15, _user: dict = Depends(require_admin)):
+    """
+    Returns recent user activity from Supabase.
+    """
+    if not SUPABASE_URL or not SUPABASE_SERVICE_KEY:
+        return {"status": "error", "message": "Supabase not configured"}
+
+    headers = {
+        "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
+        "apikey": SUPABASE_SERVICE_KEY,
+    }
+
+    async with httpx.AsyncClient() as client:
+        try:
+            # Fetch recently updated/created users as a proxy for activity
+            res = await client.get(
+                f"{SUPABASE_URL}/rest/v1/manin_users?select=email,is_pro,updated_at&order=updated_at.desc&limit={limit}",
+                headers=headers
+            )
+            return {"status": "ok", "data": res.json()}
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
