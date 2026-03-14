@@ -43,11 +43,16 @@ RECON_HEADERS = {
 COINGECKO_BASE = "https://api.coingecko.com/api/v3"
 COINCAP_BASE = "https://api.coincap.io/v2"
 COINPAPRIKA_BASE = "https://api.coinpaprika.com/v1"
+COINLORE_BASE = "https://api.coinlore.net/api"
 
 @app.get("/api/crypto/recon/logs")
 async def get_recon_logs():
     """Hidden intelligence node for debugging connectivity."""
-    return {"logs": _recon_logs, "cache_status": {k: v for k, v in _stats_cache.items() if k != 'data'}}
+    return {
+        "logs": _recon_logs, 
+        "status": "OPERATIONAL",
+        "cache": {k: v for k, v in _stats_cache.items() if k != 'data'}
+    }
 
 def calculate_signals(coin: Dict[str, Any]) -> List[str]:
     signals = []
@@ -74,50 +79,74 @@ def get_tactical_advice(category: str, data: List[Dict[str, Any]]) -> Dict[str, 
     return {"advice": advices.get(category, "Analyzing data flow..."), "confidence": round(base_conf + (random.random() * 5), 1)}
 
 async def fetch_fallback_data(client: httpx.AsyncClient):
-    """Tertiary Node: Try CoinCap, then Paprika for global stats."""
+    """Discrete Node failover: Each source is independent."""
+    processed = []
+    global_stats = {"market_cap": "N/A", "bitcoin_dominance": "N/A", "active_cryptos": "N/A", "volume_24h": "N/A"}
+    
+    # Tier 1 Fallback: CoinCap for Markets
+    log_recon("RECON :: ATTEMPTING_DISCRETE_NODE_COINCAP...")
     try:
-        log_recon("INITIATING_SECONDARY_SCAN :: CONNECTING_TO_COINCAP...")
-        res = await client.get(f"{COINCAP_BASE}/assets", params={"limit": 250}, headers=RECON_HEADERS, timeout=12.0)
-        if res.status_code != 200:
-            log_recon(f"COINCAP_NODE_FAILURE :: STATUS: {res.status_code}")
-            return [], None
-            
-        data = res.json().get("data", [])
-        processed = []
-        for coin in data:
-            price = float(coin.get("priceUsd", 0))
-            change = float(coin.get("changePercent24Hr", 0))
-            processed.append({
-                "id": coin.get("id"), "name": coin.get("name"), "symbol": coin.get("symbol").upper(),
-                "price": price, "formatted_price": f"${price:,.2f}" if price >= 0.01 else f"${price:.6f}",
-                "change": change, "formatted_change": f"{change:+.2f}%",
-                "image": None, "rank": int(coin.get("rank", 999)),
-                "volume": f"${float(coin.get('volumeUsd24Hr', 0)) / 1e6:,.2f}M",
-                "signals": ["FAILOVER_MODE"]
-            })
-        
-        # Try CoinPaprika for global stats if needed
-        global_stats = {"market_cap": "$1.5T", "bitcoin_dominance": "52%", "active_cryptos": "12,000+", "volume_24h": "$80B"}
-        try:
-            log_recon("INITIATING_TERTIARY_SCAN :: CONNECTING_TO_COINPAPRIKA...")
-            p_res = await client.get(f"{COINPAPRIKA_BASE}/global", headers=RECON_HEADERS, timeout=8.0)
-            if p_res.status_code == 200:
-                p_data = p_res.json()
-                global_stats = {
-                    "market_cap": f"${int(p_data.get('market_cap_usd', 0) / 1e12):.1f}T",
-                    "bitcoin_dominance": f"{p_data.get('bitcoin_dominance_percentage', 0):.1f}%",
-                    "active_cryptos": f"{p_data.get('cryptocurrencies_number', 0):,}",
-                    "volume_24h": f"${int(p_data.get('volume_24h_usd', 0) / 1e9):.1f}B",
-                }
-            else:
-                log_recon(f"COINPAPRIKA_NODE_FAILURE :: STATUS: {p_res.status_code}")
-        except Exception as e:
-            log_recon(f"COINPAPRIKA_TIMEOUT :: {str(e)}")
-        
-        return processed, global_stats
+        res = await client.get(f"{COINCAP_BASE}/assets", params={"limit": 250}, headers=RECON_HEADERS, timeout=8.0)
+        if res.status_code == 200:
+            data = res.json().get("data", [])
+            for coin in data:
+                price = float(coin.get("priceUsd", 0))
+                change = float(coin.get("changePercent24Hr", 0))
+                processed.append({
+                    "id": coin.get("id"), "name": coin.get("name"), "symbol": coin.get("symbol").upper(),
+                    "price": price, "formatted_price": f"${price:,.2f}" if price >= 0.01 else f"${price:.6f}",
+                    "change": change, "formatted_change": f"{change:+.2f}%",
+                    "image": None, "rank": int(coin.get("rank", 999)),
+                    "volume": f"${float(coin.get('volumeUsd24Hr', 0)) / 1e6:,.2f}M",
+                    "signals": ["FAILOVER_NODE_CAP"]
+                })
+            log_recon("RECON :: COINCAP_DATA_ACQUIRED")
+        else:
+            log_recon(f"RECON :: COINCAP_STATUS_ERROR: {res.status_code}")
     except Exception as e:
-        log_recon(f"SECONDARY_SCAN_CRITICAL_FAILURE :: {str(e)}")
-        return [], None
+        log_recon(f"RECON :: COINCAP_DNS_OR_NET_ERROR: {str(e)}")
+
+    # Tier 2 Fallback: CoinLore for Markets (If CoinCap failed or returned empty)
+    if not processed:
+        log_recon("RECON :: ATTEMPTING_DISCRETE_NODE_COINLORE...")
+        try:
+            res = await client.get(f"{COINLORE_BASE}/tickers/", headers=RECON_HEADERS, timeout=8.0)
+            if res.status_code == 200:
+                data = res.json().get("data", [])
+                for coin in data:
+                    price = float(coin.get("price_usd", 0))
+                    change = float(coin.get("percent_change_24h", 0))
+                    processed.append({
+                        "id": coin.get("id"), "name": coin.get("name"), "symbol": coin.get("symbol").upper(),
+                        "price": price, "formatted_price": f"${price:,.2f}" if price >= 0.01 else f"${price:.6f}",
+                        "change": change, "formatted_change": f"{change:+.2f}%",
+                        "image": None, "rank": int(coin.get("rank", 999)),
+                        "volume": "HIDDEN",
+                        "signals": ["FAILOVER_NODE_LORE"]
+                    })
+                log_recon("RECON :: COINLORE_DATA_ACQUIRED")
+        except Exception as e:
+            log_recon(f"RECON :: COINLORE_ERROR: {str(e)}")
+
+    # Tier 3 Fallback: CoinPaprika for Global Stats
+    log_recon("RECON :: ATTEMPTING_DISCRETE_NODE_PAPRIKA_GLOBAL...")
+    try:
+        p_res = await client.get(f"{COINPAPRIKA_BASE}/global", headers=RECON_HEADERS, timeout=6.0)
+        if p_res.status_code == 200:
+            p_data = p_res.json()
+            global_stats = {
+                "market_cap": f"${int(p_data.get('market_cap_usd', 0) / 1e12):.1f}T",
+                "bitcoin_dominance": f"{p_data.get('bitcoin_dominance_percentage', 0):.1f}%",
+                "active_cryptos": f"{p_data.get('cryptocurrencies_number', 0):,}",
+                "volume_24h": f"${int(p_data.get('volume_24h_usd', 0) / 1e9):.1f}B",
+            }
+            log_recon("RECON :: GLOBAL_STATS_PAPRIKA_ACQUIRED")
+        else:
+            log_recon(f"RECON :: COINPAPRIKA_STATUS_ERROR: {p_res.status_code}")
+    except Exception as e:
+        log_recon(f"RECON :: PAPRIKA_GLOBAL_ERROR: {str(e)}")
+
+    return processed, global_stats
 
 def generate_simulation_data():
     """Final Defense: Protocol Zero - Realistic Market Simulation."""
@@ -151,44 +180,45 @@ def generate_simulation_data():
 async def get_crypto_stats():
     now = time.time()
     
-    # Check cache first
-    if now < _stats_cache["backoff_until"] and _stats_cache["data"]:
-        return _stats_cache["data"]
+    # 1. Cache Hygiene & Smart Filtering
+    if _stats_cache["data"]:
+        age = now - _stats_cache["last_sync"]
+        source = _stats_cache["data"].get("source")
         
-    if _stats_cache["data"] and (now - _stats_cache["last_sync"] < _stats_cache["ttl"]):
-        return _stats_cache["data"]
+        # If cache is fresh (< 5 mins), return always
+        if age < _stats_cache["ttl"]:
+            return _stats_cache["data"]
+            
+        # If we reached backoff from 429s, return stale data always
+        if now < _stats_cache["backoff_until"]:
+            return _stats_cache["data"]
 
     async with httpx.AsyncClient() as client:
         try:
-            log_recon("PRIMARY_SCAN_INITIATED :: CONNECTING_TO_COINGECKO...")
+            log_recon("RECON :: PRIMARY_SCAN_STARTING...")
             g_task = client.get(f"{COINGECKO_BASE}/global", headers=RECON_HEADERS, timeout=10.0)
             m_task = client.get(f"{COINGECKO_BASE}/coins/markets", params={"vs_currency": "usd", "per_page": 250}, headers=RECON_HEADERS, timeout=10.0)
             t_task = client.get(f"{COINGECKO_BASE}/search/trending", headers=RECON_HEADERS, timeout=10.0)
             
             responses = await asyncio.gather(g_task, m_task, t_task, return_exceptions=True)
             
-            # Handle 429
+            # Status check
             for r in responses:
                 if not isinstance(r, Exception) and r.status_code == 429:
-                    log_recon("COINGECKO_NODE_LIMIT :: 429_DETECTED")
+                    log_recon("RECON :: COINGECKO_RATE_LIMITED (429)")
                     _stats_cache["backoff_until"] = now + 180 # 3 min backoff
                     raise Exception("CG_RATE_LIMIT")
 
-            # Parse primary
-            g_res = responses[0]
-            m_res = responses[1]
-            t_res = responses[2]
-            
+            g_res, m_res, t_res = responses
             if any(isinstance(r, Exception) or r.status_code != 200 for r in [g_res, m_res, t_res]):
-                err_msg = ""
-                if isinstance(g_res, Exception): err_msg += f" GlobalErr: {str(g_res)}"
-                elif g_res.status_code != 200: err_msg += f" GlobalStatus: {g_res.status_code}"
-                log_recon(f"PRIMARY_NODE_INCOMPLETE ::{err_msg}")
+                err_info = ""
+                if isinstance(m_res, Exception): err_info = f"NetError: {str(m_res)}"
+                elif m_res.status_code != 200: err_info = f"HttpStatus: {m_res.status_code}"
+                log_recon(f"RECON :: PRIMARY_NODE_FAILURE :: {err_info}")
                 raise Exception("PRIMARY_NODE_INCOMPLETE")
 
             g_json = g_res.json().get("data", {})
             m_json = m_res.json()
-            t_json = t_res.json().get("coins", [])
 
             processed = []
             for c in m_json:
@@ -220,34 +250,35 @@ async def get_crypto_stats():
             }
             _stats_cache["data"] = result
             _stats_cache["last_sync"] = now
-            log_recon("MASTER_SYNC_COMPLETE :: PRIMARY_DATA_CACHED")
+            log_recon("RECON :: MASTER_SYNC_COMPLETE")
             return result
 
         except Exception as e:
-            log_recon(f"PRIMARY_LINK_FAILURE :: {str(e)} :: ATTEMPTING_FAILOVER")
-            fallback_list, fallback_global = await fetch_fallback_data(client)
-            if fallback_list:
+            log_recon(f"RECON :: FALLOVER_TRIGGERED :: {str(e)}")
+            f_list, f_global = await fetch_fallback_data(client)
+            
+            if f_list:
                 res = {
-                    "global": fallback_global or {"market_cap": "N/A", "bitcoin_dominance": "N/A", "active_cryptos": "N/A", "volume_24h": "N/A"},
+                    "global": f_global,
                     "data": {
-                        "gainers": {"list": sorted(fallback_list, key=lambda x: x['change'], reverse=True)[:20], "insight": {"advice": "FAILOVER_STREAM_ACTIVE :: Monitoring secondary nodes.", "confidence": 60}},
-                        "losers": {"list": sorted(fallback_list, key=lambda x: x['change'])[:20], "insight": {"advice": "FAILOVER_STREAM_ACTIVE :: Scanning backup data nodes.", "confidence": 60}},
-                        "penny_gems": {"list": [c for c in fallback_list if c['price'] < 0.5][:20], "insight": {"advice": "FAILOVER_MODE :: Small-cap recon limited.", "confidence": 50}},
+                        "gainers": {"list": sorted(f_list, key=lambda x: x['change'], reverse=True)[:20], "insight": {"advice": "FAILOVER_NODES_ACTIVE :: Monitoring secondary streams.", "confidence": 60}},
+                        "losers": {"list": sorted(f_list, key=lambda x: x['change'])[:20], "insight": {"advice": "FAILOVER_NODES_ACTIVE :: Monitoring secondary streams.", "confidence": 60}},
+                        "penny_gems": {"list": [c for c in f_list if c['price'] < 0.5][:20], "insight": {"advice": "FAILOVER_MODE :: Limited small-cap data.", "confidence": 50}},
                         "new_listings": {"list": [], "insight": {"advice": "OFFLINE", "confidence": 0}},
                     },
-                    "source": "MULTI_API_FAILOVER"
+                    "source": "MULTI_NODE_FAILOVER"
                 }
                 _stats_cache["data"] = res
-                _stats_cache["last_sync"] = now - 240 # Expire soon
+                _stats_cache["last_sync"] = now
                 return res
             
             # FINAL RESORT: PROTOCOL ZERO
-            if _stats_cache["data"]:
-                log_recon("ALL_SENSORS_OFFLINE :: RETURNING_STALE_DATA_SAFE_MODE")
+            if _stats_cache["data"] and _stats_cache["data"].get("source") != "PROTOCOL_ZERO_SIMULATION":
+                log_recon("RECON :: ALL_NODES_OFFLINE :: RETURNING_STALE_CACHE")
                 return _stats_cache["data"]
             
-            log_recon("ALL_SENSORS_OFFLINE :: INITIATING_PROTOCOL_ZERO_SAFE_MODE")
+            log_recon("RECON :: TOTAL_SENSOR_BLACKOUT :: ENGAGING_PROTOCOL_ZERO")
             sim_data = generate_simulation_data()
             _stats_cache["data"] = sim_data
-            _stats_cache["last_sync"] = now - 240 # Expire soon
+            _stats_cache["last_sync"] = now
             return sim_data

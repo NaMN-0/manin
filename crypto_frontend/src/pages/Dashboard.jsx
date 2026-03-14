@@ -94,11 +94,25 @@ const Dashboard = () => {
             }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
                     <KageLogo width={32} height={32} />
-                    <span style={{ fontSize: 24, fontWeight: 950, letterSpacing: "-1.5px" }}>KAGE <span style={{ color: "var(--primary)" }}>AI</span></span>
+                    <span style={{ fontSize: 24, fontWeight: 950, letterSpacing: "-1.5px" }}>KAGE <span style={{ color: "var(--primary)" }}>AI</span> <span style={{ fontSize: 10, fontWeight: 400, color: "rgba(255,255,255,0.2)", marginLeft: 8 }}>v0.4.9</span></span>
                     <div style={{ height: 16, width: 1, background: "rgba(255,255,255,0.1)", margin: "0 8px" }} />
                     <div style={{ fontFamily: "var(--font-mono)", color: "var(--emerald)", fontSize: 10, display: "flex", alignItems: "center", gap: 8, fontWeight: 800 }}>
                         <span className="pulse-dot"></span> LIVE NODES ACTIVE
                     </div>
+                    {data?.source && (
+                        <div style={{ 
+                            fontFamily: "var(--font-mono)", 
+                            fontSize: 9, 
+                            padding: "2px 8px", 
+                            borderRadius: 4, 
+                            background: data.source === 'COINGECKO_PRIMARY' ? "rgba(16,185,129,0.1)" : data.source === 'MULTI_NODE_FAILOVER' ? "rgba(245,158,11,0.1)" : "rgba(239,68,68,0.1)",
+                            border: `1px solid ${data.source === 'COINGECKO_PRIMARY' ? "rgba(16,185,129,0.2)" : data.source === 'MULTI_NODE_FAILOVER' ? "rgba(245,158,11,0.2)" : "rgba(239,68,68,0.2)"}`,
+                            color: data.source === 'COINGECKO_PRIMARY' ? "#10b981" : data.source === 'MULTI_NODE_FAILOVER' ? "#f59e0b" : "#ef4444",
+                            letterSpacing: "0.5px"
+                        }}>
+                            SOURCE: {data.source.replace(/_/g, ' ')}
+                        </div>
+                    )}
                 </div>
 
                 <div className="glass" style={{ width: 400, height: 36, padding: "0 16px", fontFamily: "var(--font-mono)", fontSize: 9, color: "var(--primary)", overflow: "hidden", display: "flex", alignItems: "center", gap: 16, borderRadius: 8, border: "1px solid rgba(14,165,233,0.1)" }}>
