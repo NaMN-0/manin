@@ -84,26 +84,41 @@ async def get_crypto_stats():
             markets_task = client.get(f"{COINGECKO_BASE}/coins/markets", params=markets_params)
             trending_task = client.get(f"{COINGECKO_BASE}/search/trending")
             
-            global_res, markets_res, trending_res = await asyncio.gather(global_task, markets_task, trending_task)
+            responses = await asyncio.gather(global_task, markets_task, trending_task, return_exceptions=True)
             
-            global_data = global_res.json().get("data", {})
-            markets_data = markets_res.json()
-            trending_data = trending_res.json().get("coins", [])
+            # Validation logic to prevent 'str' object attribute errors
+            valid_responses = []
+            for res in responses:
+                if isinstance(res, Exception):
+                    raise res
+                if res.status_code != 200:
+                    raise Exception(f"API_ERROR: {res.status_code} - {res.text[:100]}")
+                valid_responses.append(res.json())
+
+            global_json, markets_json, trending_json = valid_responses
+            
+            global_data = global_json.get("data", {})
+            if not isinstance(global_data, dict): global_data = {}
+            
+            markets_data = markets_json if isinstance(markets_json, list) else []
+            trending_data = trending_json.get("coins", []) if isinstance(trending_json, dict) else []
 
             # Process Markets Data
             processed_data = []
             top_100_ids = set()
             for coin in markets_data:
+                if not isinstance(coin, dict): continue
+                
                 price = coin.get("current_price") or 0
                 rank = coin.get("market_cap_rank")
-                if rank and rank <= 100:
+                if rank and isinstance(rank, int) and rank <= 100:
                     top_100_ids.add(coin.get("id"))
                 
                 signals = calculate_signals(coin)
                 processed_data.append({
                     "id": coin.get("id"),
                     "name": coin.get("name"),
-                    "symbol": coin.get("symbol").upper(),
+                    "symbol": str(coin.get("symbol", "UNK")).upper(),
                     "price": price,
                     "formatted_price": f"${price:,}" if price >= 0.01 else f"${price:.6f}",
                     "change": coin.get('price_change_percentage_24h') or 0,
@@ -122,18 +137,24 @@ async def get_crypto_stats():
             # New Listings/Trending Filtered (No Top 100 like BTC/ETH)
             new_listings = []
             for t_coin in trending_data:
+                if not isinstance(t_coin, dict): continue
                 item = t_coin.get('item', {})
+                if not isinstance(item, dict): continue
+                
                 coin_id = item.get("id")
                 # Filter out established majors
                 if coin_id in top_100_ids or (item.get("market_cap_rank") and item.get("market_cap_rank") <= 100):
                     continue
+                
+                data_node = item.get("data", {})
+                price_val = data_node.get("price", "N/A") if isinstance(data_node, dict) else "N/A"
                     
                 new_listings.append({
                     "id": coin_id,
                     "name": item.get("name"),
                     "symbol": item.get("symbol"),
-                    "price": item.get("data", {}).get("price", "N/A"),
-                    "formatted_price": str(item.get("data", {}).get("price", "N/A")),
+                    "price": price_val,
+                    "formatted_price": str(price_val),
                     "change": 0,
                     "formatted_change": "+ Trending",
                     "image": item.get("small"),
@@ -157,4 +178,5 @@ async def get_crypto_stats():
                 }
             }
         except Exception as e:
+            print(f"CRITICAL_ERROR: {str(e)}")
             return {"error": str(e), "data": {}}
