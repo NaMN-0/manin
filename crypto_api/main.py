@@ -20,10 +20,12 @@ app.add_middleware(
 _stats_cache = {
     "data": None,
     "last_sync": 0,
-    "ttl": 60  # Cache for 60 seconds
+    "ttl": 300,  # Cache for 5 minutes (Extreme Stability)
+    "backoff_until": 0
 }
 
 COINGECKO_BASE = "https://api.coingecko.com/api/v3"
+COINCAP_BASE = "https://api.coincap.io/v2"
 
 def calculate_signals(coin: Dict[str, Any]) -> List[str]:
     """Calculate tactical trading signals based on price and volume action."""
