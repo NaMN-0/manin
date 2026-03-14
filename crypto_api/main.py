@@ -90,33 +90,74 @@ async def fetch_fallback_data(client: httpx.AsyncClient):
     except:
         return [], None
 
+def generate_simulation_data():
+    """Final Defense: Protocol Zero - Realistic Market Simulation."""
+    print("PROTOCOL_ZERO_ACTIVATED :: GENERATING_SIMULATED_RECON_DATA")
+    coins = ["BTC", "ETH", "SOL", "KAGE", "BNB", "XRP", "ADA", "DOGE", "TRX", "DOT"]
+    processed = []
+    for i, sym in enumerate(coins):
+        price = 60000 / (i + 1)
+        change = random.uniform(-5, 10)
+        processed.append({
+            "id": sym.lower(), "name": sym, "symbol": sym,
+            "price": price, "formatted_price": f"${price:,.2f}",
+            "change": change, "formatted_change": f"{change:+.2f}%",
+            "image": None, "rank": i + 1,
+            "volume": f"${random.uniform(100, 1000):.1f}M",
+            "signals": ["SIMULATED_FEED"]
+        })
+    
+    return {
+        "global": {"market_cap": "$1.8T", "bitcoin_dominance": "51.2%", "active_cryptos": "15,000+", "volume_24h": "$95B"},
+        "data": {
+            "gainers": {"list": sorted(processed, key=lambda x: x['change'], reverse=True)[:5], "insight": {"advice": "PROTOCOL_ZERO_ACTIVE :: Running on simulated intelligence nodes. Check network link.", "confidence": 40}},
+            "losers": {"list": sorted(processed, key=lambda x: x['change'])[:5], "insight": {"advice": "SIMULATION_MODE :: External sensors offline. Monitoring synthetic volatility.", "confidence": 40}},
+            "penny_gems": {"list": [], "insight": {"advice": "Limited recon in simulation mode.", "confidence": 0}},
+            "new_listings": {"list": [], "insight": {"advice": "Offline", "confidence": 0}},
+        },
+        "source": "PROTOCOL_ZERO_SIMULATION"
+    }
+
 @app.get("/api/crypto/stats")
 async def get_crypto_stats():
     now = time.time()
+    
+    # Check cache first
     if now < _stats_cache["backoff_until"] and _stats_cache["data"]:
+        print(f"BACKOFF_ACTIVE :: RETURNING_STALE_DATA ({int(_stats_cache['backoff_until'] - now)}s remaining)")
         return _stats_cache["data"]
+        
     if _stats_cache["data"] and (now - _stats_cache["last_sync"] < _stats_cache["ttl"]):
+        print(f"CACHE_HIT :: {int(now - _stats_cache['last_sync'])}s old")
         return _stats_cache["data"]
 
     async with httpx.AsyncClient() as client:
         try:
-            # Primary: CoinGecko
-            g_task = client.get(f"{COINGECKO_BASE}/global", timeout=10.0)
-            m_task = client.get(f"{COINGECKO_BASE}/coins/markets", params={"vs_currency": "usd", "per_page": 250}, timeout=10.0)
-            t_task = client.get(f"{COINGECKO_BASE}/search/trending", timeout=10.0)
+            print("SENSOR_SCAN_INITIATED :: CONNECTING_TO_PRIMARY_NODE...")
+            g_task = client.get(f"{COINGECKO_BASE}/global", timeout=8.0)
+            m_task = client.get(f"{COINGECKO_BASE}/coins/markets", params={"vs_currency": "usd", "per_page": 250}, timeout=8.0)
+            t_task = client.get(f"{COINGECKO_BASE}/search/trending", timeout=8.0)
             
             responses = await asyncio.gather(g_task, m_task, t_task, return_exceptions=True)
             
-            # Handle 429 specifically
+            # Handle 429
             for r in responses:
                 if not isinstance(r, Exception) and r.status_code == 429:
-                    _stats_cache["backoff_until"] = now + 120
+                    print("PRIMARY_NODE_RATE_LIMIT :: 429_DETECTED")
+                    _stats_cache["backoff_until"] = now + 180 # 3 min backoff
                     raise Exception("CG_RATE_LIMIT")
 
             # Parse primary
-            g_json = responses[0].json().get("data", {})
-            m_json = responses[1].json()
-            t_json = responses[2].json().get("coins", [])
+            g_res = responses[0]
+            m_res = responses[1]
+            t_res = responses[2]
+            
+            if any(isinstance(r, Exception) or r.status_code != 200 for r in [g_res, m_res, t_res]):
+                raise Exception("PRIMARY_NODE_INCOMPLETE")
+
+            g_json = g_res.json().get("data", {})
+            m_json = m_res.json()
+            t_json = t_res.json().get("coins", [])
 
             processed = []
             for c in m_json:
@@ -148,18 +189,19 @@ async def get_crypto_stats():
             }
             _stats_cache["data"] = result
             _stats_cache["last_sync"] = now
+            print("MASTER_SYNC_COMPLETE :: PRIMARY_DATA_CACHED")
             return result
 
         except Exception as e:
-            print(f"FAILOVER_TRIGGERED :: {str(e)}")
+            print(f"PRIMARY_LINK_FAILURE :: {str(e)} :: ATTEMPTING_SECONDARY_FAILOVER")
             fallback_list, fallback_global = await fetch_fallback_data(client)
             if fallback_list:
                 res = {
                     "global": fallback_global or {"market_cap": "N/A", "bitcoin_dominance": "N/A", "active_cryptos": "N/A", "volume_24h": "N/A"},
                     "data": {
-                        "gainers": {"list": sorted(fallback_list, key=lambda x: x['change'], reverse=True)[:20], "insight": {"advice": "FAILOVER_STREAM_ACTIVE", "confidence": 60}},
-                        "losers": {"list": sorted(fallback_list, key=lambda x: x['change'])[:20], "insight": {"advice": "FAILOVER_STREAM_ACTIVE", "confidence": 60}},
-                        "penny_gems": {"list": [c for c in fallback_list if c['price'] < 0.5][:20], "insight": {"advice": "FAILOVER_STREAM_ACTIVE", "confidence": 60}},
+                        "gainers": {"list": sorted(fallback_list, key=lambda x: x['change'], reverse=True)[:20], "insight": {"advice": "FAILOVER_STREAM_ACTIVE :: Monitoring secondary nodes.", "confidence": 60}},
+                        "losers": {"list": sorted(fallback_list, key=lambda x: x['change'])[:20], "insight": {"advice": "FAILOVER_STREAM_ACTIVE :: Scanning backup data nodes.", "confidence": 60}},
+                        "penny_gems": {"list": [c for c in fallback_list if c['price'] < 0.5][:20], "insight": {"advice": "FAILOVER_MODE :: Small-cap recon limited.", "confidence": 50}},
                         "new_listings": {"list": [], "insight": {"advice": "OFFLINE", "confidence": 0}},
                     },
                     "source": "MULTI_API_FAILOVER"
@@ -168,4 +210,12 @@ async def get_crypto_stats():
                 _stats_cache["last_sync"] = now - 240 # Expire soon
                 return res
             
-            return _stats_cache["data"] or {"error": "MARKET_LINK_FATAL", "global": {"market_cap": "N/A", "bitcoin_dominance": "N/A", "active_cryptos": "N/A", "volume_24h": "N/A"}, "data": {}}
+            # FINAL RESORT: PROTOCOL ZERO
+            if _stats_cache["data"]:
+                print("ALL_SENSOR_OFFLINE :: RETURNING_STALE_DATA_SAFE_MODE")
+                return _stats_cache["data"]
+            
+            sim_data = generate_simulation_data()
+            _stats_cache["data"] = sim_data
+            _stats_cache["last_sync"] = now - 240 # Expire soon
+            return sim_data
