@@ -7,11 +7,11 @@ export default defineConfig({
   server: {
     host: '0.0.0.0',
     port: 5173,
-    proxy: {
-      '/api': {
-        target: 'http://crypto-api:8000',
-        changeOrigin: true,
-      }
-    }
+    allowedHosts: true, // Allow custom domains and Render subdomains
+  },
+  preview: {
+    host: '0.0.0.0',
+    port: 4173,
+    allowedHosts: true, // Specifically fix for Render preview command
   }
 })
