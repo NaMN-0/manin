@@ -24,9 +24,29 @@ _stats_cache = {
     "backoff_until": 0
 }
 
+# Internal Recon Logs for debugging prod connectivity
+_recon_logs = []
+
+def log_recon(msg: str):
+    global _recon_logs
+    timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
+    _recon_logs.append(f"[{timestamp}] {msg}")
+    if len(_recon_logs) > 50: _recon_logs.pop(0)
+
+RECON_HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "Accept": "application/json",
+    "Accept-Language": "en-US,en;q=0.9",
+}
+
 COINGECKO_BASE = "https://api.coingecko.com/api/v3"
 COINCAP_BASE = "https://api.coincap.io/v2"
 COINPAPRIKA_BASE = "https://api.coinpaprika.com/v1"
+
+@app.get("/api/crypto/recon/logs")
+async def get_recon_logs():
+    """Hidden intelligence node for debugging connectivity."""
+    return {"logs": _recon_logs, "cache_status": {k: v for k, v in _stats_cache.items() if k != 'data'}}
 
 def calculate_signals(coin: Dict[str, Any]) -> List[str]:
     signals = []
@@ -55,10 +75,13 @@ def get_tactical_advice(category: str, data: List[Dict[str, Any]]) -> Dict[str, 
 async def fetch_fallback_data(client: httpx.AsyncClient):
     """Tertiary Node: Try CoinCap, then Paprika for global stats."""
     try:
-        # Try CoinCap for markets
-        res = await client.get(f"{COINCAP_BASE}/assets", params={"limit": 250}, timeout=10.0)
-        data = res.json().get("data", []) if res.status_code == 200 else []
-        
+        log_recon("INITIATING_SECONDARY_SCAN :: CONNECTING_TO_COINCAP...")
+        res = await client.get(f"{COINCAP_BASE}/assets", params={"limit": 250}, headers=RECON_HEADERS, timeout=12.0)
+        if res.status_code != 200:
+            log_recon(f"COINCAP_NODE_FAILURE :: STATUS: {res.status_code}")
+            return [], None
+            
+        data = res.json().get("data", [])
         processed = []
         for coin in data:
             price = float(coin.get("priceUsd", 0))
@@ -75,7 +98,8 @@ async def fetch_fallback_data(client: httpx.AsyncClient):
         # Try CoinPaprika for global stats if needed
         global_stats = {"market_cap": "$1.5T", "bitcoin_dominance": "52%", "active_cryptos": "12,000+", "volume_24h": "$80B"}
         try:
-            p_res = await client.get(f"{COINPAPRIKA_BASE}/global", timeout=5.0)
+            log_recon("INITIATING_TERTIARY_SCAN :: CONNECTING_TO_COINPAPRIKA...")
+            p_res = await client.get(f"{COINPAPRIKA_BASE}/global", headers=RECON_HEADERS, timeout=8.0)
             if p_res.status_code == 200:
                 p_data = p_res.json()
                 global_stats = {
@@ -84,10 +108,14 @@ async def fetch_fallback_data(client: httpx.AsyncClient):
                     "active_cryptos": f"{p_data.get('cryptocurrencies_number', 0):,}",
                     "volume_24h": f"${int(p_data.get('volume_24h_usd', 0) / 1e9):.1f}B",
                 }
-        except: pass
+            else:
+                log_recon(f"COINPAPRIKA_NODE_FAILURE :: STATUS: {p_res.status_code}")
+        except Exception as e:
+            log_recon(f"COINPAPRIKA_TIMEOUT :: {str(e)}")
         
         return processed, global_stats
-    except:
+    except Exception as e:
+        log_recon(f"SECONDARY_SCAN_CRITICAL_FAILURE :: {str(e)}")
         return [], None
 
 def generate_simulation_data():
@@ -124,26 +152,24 @@ async def get_crypto_stats():
     
     # Check cache first
     if now < _stats_cache["backoff_until"] and _stats_cache["data"]:
-        print(f"BACKOFF_ACTIVE :: RETURNING_STALE_DATA ({int(_stats_cache['backoff_until'] - now)}s remaining)")
         return _stats_cache["data"]
         
     if _stats_cache["data"] and (now - _stats_cache["last_sync"] < _stats_cache["ttl"]):
-        print(f"CACHE_HIT :: {int(now - _stats_cache['last_sync'])}s old")
         return _stats_cache["data"]
 
     async with httpx.AsyncClient() as client:
         try:
-            print("SENSOR_SCAN_INITIATED :: CONNECTING_TO_PRIMARY_NODE...")
-            g_task = client.get(f"{COINGECKO_BASE}/global", timeout=8.0)
-            m_task = client.get(f"{COINGECKO_BASE}/coins/markets", params={"vs_currency": "usd", "per_page": 250}, timeout=8.0)
-            t_task = client.get(f"{COINGECKO_BASE}/search/trending", timeout=8.0)
+            log_recon("PRIMARY_SCAN_INITIATED :: CONNECTING_TO_COINGECKO...")
+            g_task = client.get(f"{COINGECKO_BASE}/global", headers=RECON_HEADERS, timeout=10.0)
+            m_task = client.get(f"{COINGECKO_BASE}/coins/markets", params={"vs_currency": "usd", "per_page": 250}, headers=RECON_HEADERS, timeout=10.0)
+            t_task = client.get(f"{COINGECKO_BASE}/search/trending", headers=RECON_HEADERS, timeout=10.0)
             
             responses = await asyncio.gather(g_task, m_task, t_task, return_exceptions=True)
             
             # Handle 429
             for r in responses:
                 if not isinstance(r, Exception) and r.status_code == 429:
-                    print("PRIMARY_NODE_RATE_LIMIT :: 429_DETECTED")
+                    log_recon("COINGECKO_NODE_LIMIT :: 429_DETECTED")
                     _stats_cache["backoff_until"] = now + 180 # 3 min backoff
                     raise Exception("CG_RATE_LIMIT")
 
@@ -153,6 +179,10 @@ async def get_crypto_stats():
             t_res = responses[2]
             
             if any(isinstance(r, Exception) or r.status_code != 200 for r in [g_res, m_res, t_res]):
+                err_msg = ""
+                if isinstance(g_res, Exception): err_msg += f" GlobalErr: {str(g_res)}"
+                elif g_res.status_code != 200: err_msg += f" GlobalStatus: {g_res.status_code}"
+                log_recon(f"PRIMARY_NODE_INCOMPLETE ::{err_msg}")
                 raise Exception("PRIMARY_NODE_INCOMPLETE")
 
             g_json = g_res.json().get("data", {})
@@ -189,11 +219,11 @@ async def get_crypto_stats():
             }
             _stats_cache["data"] = result
             _stats_cache["last_sync"] = now
-            print("MASTER_SYNC_COMPLETE :: PRIMARY_DATA_CACHED")
+            log_recon("MASTER_SYNC_COMPLETE :: PRIMARY_DATA_CACHED")
             return result
 
         except Exception as e:
-            print(f"PRIMARY_LINK_FAILURE :: {str(e)} :: ATTEMPTING_SECONDARY_FAILOVER")
+            log_recon(f"PRIMARY_LINK_FAILURE :: {str(e)} :: ATTEMPTING_FAILOVER")
             fallback_list, fallback_global = await fetch_fallback_data(client)
             if fallback_list:
                 res = {
@@ -212,9 +242,10 @@ async def get_crypto_stats():
             
             # FINAL RESORT: PROTOCOL ZERO
             if _stats_cache["data"]:
-                print("ALL_SENSOR_OFFLINE :: RETURNING_STALE_DATA_SAFE_MODE")
+                log_recon("ALL_SENSORS_OFFLINE :: RETURNING_STALE_DATA_SAFE_MODE")
                 return _stats_cache["data"]
             
+            log_recon("ALL_SENSORS_OFFLINE :: INITIATING_PROTOCOL_ZERO_SAFE_MODE")
             sim_data = generate_simulation_data()
             _stats_cache["data"] = sim_data
             _stats_cache["last_sync"] = now - 240 # Expire soon
