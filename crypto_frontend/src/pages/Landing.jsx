@@ -75,15 +75,17 @@ const KageCompanion = ({ state, message }) => {
       return;
     }
     let idx = 0;
+    let accumulated = ""; 
     setVisibleMessage("");
     const timer = setInterval(() => {
       if (idx < message.length) {
-        setVisibleMessage((prev) => prev + message.charAt(idx));
+        accumulated += message.charAt(idx);
+        setVisibleMessage(accumulated);
         idx++;
       } else {
         clearInterval(timer);
       }
-    }, 20);
+    }, 30);
     return () => clearInterval(timer);
   }, [message]);
 
@@ -115,7 +117,7 @@ const KageCompanion = ({ state, message }) => {
           pointerEvents: "auto",
         }}>
           <p style={{ color: "var(--primary)", fontSize: 10, fontWeight: 900, marginBottom: 4, letterSpacing: "1px" }}>KAGE SENSEI</p>
-          <p style={{ color: "white", fontSize: 14, lineHeight: 1.5 }}>{visibleMessage}<span style={{ animation: "blink 1s infinite" }}>_</span></p>
+          <p style={{ color: "white", fontSize: 14, lineHeight: 1.5 }}>{visibleMessage}</p>
         </div>
       )}
       <div style={{ width: 100, height: 100, filter: "drop-shadow(0 0 15px rgba(14,165,233,0.3))" }}>
@@ -188,8 +190,6 @@ export default function Landing() {
           </span>
         </div>
         <div style={{ display: "flex", gap: 40, alignItems: "center" }}>
-          <Github size={20} color="var(--text-muted)" style={{ cursor: "pointer" }} />
-          <button className="btn-secondary" style={{ padding: "10px 24px", borderRadius: 12, fontSize: 13, fontWeight: 700 }}>LOGIN</button>
         </div>
       </nav>
 

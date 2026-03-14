@@ -240,6 +240,7 @@ async def get_crypto_stats():
 
             g_json = g_res.json().get("data", {})
             m_json = m_res.json()
+            t_json = t_res.json().get("coins", [])
 
             processed = []
             for c in m_json:
@@ -254,6 +255,19 @@ async def get_crypto_stats():
                     "signals": calculate_signals(c)
                 })
 
+            # Process trending as "New/Hot Listings"
+            trending_processed = []
+            for t in t_json:
+                item = t.get("item", {})
+                trending_processed.append({
+                    "id": item.get("id"), "name": item.get("name"), "symbol": item.get("symbol", "").upper(),
+                    "price": 0, "formatted_price": "SCANNING", 
+                    "change": 0, "formatted_change": "HOT",
+                    "image": item.get("small"), "rank": item.get("market_cap_rank", 999),
+                    "volume": "TRENDING",
+                    "signals": ["NEW_LISTING"]
+                })
+
             result = {
                 "global": {
                     "market_cap": f"${int(g_json.get('total_market_cap', {}).get('usd', 0) / 1e12):.1f}T",
@@ -265,7 +279,7 @@ async def get_crypto_stats():
                     "gainers": {"list": sorted(processed, key=lambda x: x['change'], reverse=True)[:20], "insight": get_tactical_advice("gainers", processed)},
                     "losers": {"list": sorted(processed, key=lambda x: x['change'])[:20], "insight": get_tactical_advice("losers", processed)},
                     "penny_gems": {"list": [c for c in processed if c['price'] < 0.5][:20], "insight": get_tactical_advice("penny_gems", processed)},
-                    "new_listings": {"list": [], "insight": get_tactical_advice("new_listings", [])},
+                    "new_listings": {"list": trending_processed[:20], "insight": get_tactical_advice("new_listings", trending_processed)},
                 },
                 "source": "COINGECKO_PRIMARY"
             }
