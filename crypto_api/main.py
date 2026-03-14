@@ -16,6 +16,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Cache state for CoinGecko stats
+_stats_cache = {
+    "data": None,
+    "last_sync": 0,
+    "ttl": 60  # Cache for 60 seconds
+}
+
 COINGECKO_BASE = "https://api.coingecko.com/api/v3"
 
 def calculate_signals(coin: Dict[str, Any]) -> List[str]:
@@ -75,7 +82,12 @@ def get_tactical_advice(category: str, data: List[Dict[str, Any]]) -> Dict[str, 
 
 @app.get("/api/crypto/stats")
 async def get_crypto_stats():
-    """Returns global crypto market statistics and deep-scan market data including dynamic advice."""
+    """Returns global crypto market statistics with 60s backend caching."""
+    now = time.time()
+    if _stats_cache["data"] and (now - _stats_cache["last_sync"] < _stats_cache["ttl"]):
+        print(f"CACHE_HIT :: RETURNING DATA FROM {int(now - _stats_cache['last_sync'])}s AGO")
+        return _stats_cache["data"]
+
     async with httpx.AsyncClient() as client:
         try:
             # 1. Parallel Requests
@@ -177,6 +189,13 @@ async def get_crypto_stats():
                     "new_listings": {"list": new_listings, "insight": get_tactical_advice("new_listings", new_listings)},
                 }
             }
+            
+            _stats_cache["data"] = result
+            _stats_cache["last_sync"] = now
+            return result
         except Exception as e:
             print(f"CRITICAL_ERROR: {str(e)}")
+            # If we have old data, return it on error to prevent total failure
+            if _stats_cache["data"]:
+                return _stats_cache["data"]
             return {"error": str(e), "data": {}}

@@ -32,7 +32,7 @@ const Dashboard = () => {
             }
         };
         fetchStats();
-        const interval = setInterval(fetchStats, 30000); // 30s update
+        const interval = setInterval(fetchStats, 60000); // 60s sync (aligned with backend cache)
         return () => clearInterval(interval);
     }, []);
 
