@@ -118,6 +118,35 @@ def get_tactical_advice(category: str, data: List[Dict[str, Any]]) -> Dict[str, 
     }
     return {"advice": advices.get(category, "Analyzing data flow..."), "confidence": round(base_conf + (random.random() * 5), 1)}
 
+async def fetch_trending_fallback(client: httpx.AsyncClient) -> List[Dict[str, Any]]:
+    """Hot listings fallback node (CryptoCompare)."""
+    trending = []
+    headers = get_rotated_headers()
+    try:
+        # Fetching top coins by 24h volume
+        res = await client.get(f"{CRYPTOCOMPARE_BASE}/top/totalvolfull", params={"limit": 30, "tsym": "USD"}, headers=headers, timeout=8.0)
+        if res.status_code == 200:
+            data = res.json().get("Data", [])
+            for item in data:
+                info = item.get("CoinInfo", {})
+                raw = item.get("RAW", {}).get("USD", {})
+                sym = str(info.get("Name", "")).upper()
+                if sym in MAJORS_BLACKLIST: continue # Still filter majors
+                
+                trending.append({
+                    "id": info.get("Name"), "name": info.get("FullName"), "symbol": sym,
+                    "price": raw.get("PRICE", 0), "formatted_price": f"${raw.get('PRICE', 0):,.2f}", 
+                    "change": raw.get("CHANGEPCT24HOUR", 0), "formatted_change": "HOT",
+                    "image": f"https://www.cryptocompare.com{info.get('ImageUrl')}", 
+                    "rank": 999,
+                    "volume": "HIGH_VOL",
+                    "signals": ["TRENDING_FAILOVER"]
+                })
+        log_recon("RECON :: TRENDING_FALLBACK_ACQUIRED")
+    except Exception as e:
+        log_recon(f"RECON :: TRENDING_FALLBACK_FAILURE: {str(e)}")
+    return trending
+
 async def fetch_fallback_data(client: httpx.AsyncClient):
     """Tier 2 Fidelity Node: Using CryptoCompare/CoinCap for high-quality stream."""
     processed = []
@@ -303,7 +332,12 @@ async def get_crypto_stats():
 
         except Exception as e:
             log_recon(f"RECON :: FALLOVER_TRIGGERED :: {str(e)}")
-            f_list, f_global = await fetch_fallback_data(client)
+            # Concurrent fallback recon
+            f_list_task = fetch_fallback_data(client)
+            f_trend_task = fetch_trending_fallback(client)
+            
+            f_data, f_trending = await asyncio.gather(f_list_task, f_trend_task)
+            f_list, f_global = f_data
             
             if f_list:
                 res = {
@@ -312,7 +346,7 @@ async def get_crypto_stats():
                         "gainers": {"list": sorted(f_list, key=lambda x: x['change'], reverse=True)[:20], "insight": {"advice": "FAILOVER_NODES_ACTIVE :: High-fidelity tertiary stream.", "confidence": 60}},
                         "losers": {"list": sorted(f_list, key=lambda x: x['change'])[:20], "insight": {"advice": "FAILOVER_NODES_ACTIVE :: Scanning backup data nodes.", "confidence": 60}},
                         "penny_gems": {"list": [c for c in f_list if c['price'] < 0.5][:20], "insight": {"advice": "FAILOVER_MODE :: Small-cap recon active.", "confidence": 55}},
-                        "new_listings": {"list": [c for c in f_list if c['symbol'] not in MAJORS_BLACKLIST][:20], "insight": {"advice": "MONITORING_ROTATION", "confidence": 50}},
+                        "new_listings": {"list": f_trending if f_trending else [c for c in f_list if c['symbol'] not in MAJORS_BLACKLIST][:20], "insight": {"advice": "FAILOVER_TRENDING_NODE_ACTIVE", "confidence": 50}},
                     },
                     "source": "MULTI_NODE_FAILOVER"
                 }
