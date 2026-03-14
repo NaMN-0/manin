@@ -55,16 +55,35 @@ def log_recon(msg: str):
     print(f"RECON :: {msg}")
     if len(_recon_logs) > 50: _recon_logs.pop(0)
 
-RECON_HEADERS = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-    "Accept": "application/json",
-    "Accept-Language": "en-US,en;q=0.9",
-}
+# KAGE AI Tactical Blacklist: No Majors in "New Listings"
+MAJORS_BLACKLIST = {"BTC", "ETH", "SOL", "BNB", "XRP", "ADA", "DOGE", "TRX", "DOT", "MATIC", "LINK", "LTC", "BCH", "SHIB", "AVAX", "DAI", "WBTC", "UNI", "LEO", "ATOM"}
+
+# Advanced Bot-Bypass Header Bank
+RECON_HEADER_BANK = [
+    {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
+        "Accept": "application/json",
+        "Accept-Language": "en-US,en;q=0.9",
+        "Sec-Ch-Ua": '"Not A(Brand";v="99", "Google Chrome";v="121", "Chromium";v="121"',
+    },
+    {
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Accept": "application/json",
+    },
+    {
+        "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
+        "Accept": "application/json",
+    }
+]
+
+def get_rotated_headers():
+    return random.choice(RECON_HEADER_BANK)
 
 COINGECKO_BASE = "https://api.coingecko.com/api/v3"
 COINCAP_BASE = "https://api.coincap.io/v2"
 COINPAPRIKA_BASE = "https://api.coinpaprika.com/v1"
 COINLORE_BASE = "https://api.coinlore.net/api"
+CRYPTOCOMPARE_BASE = "https://min-api.cryptocompare.com/data"
 
 @app.get("/api/crypto/recon/logs")
 async def get_recon_logs():
@@ -87,7 +106,7 @@ def calculate_signals(coin: Dict[str, Any]) -> List[str]:
 
 def get_tactical_advice(category: str, data: List[Dict[str, Any]]) -> Dict[str, Any]:
     if not data: return {"advice": "Reconnaissance in progress...", "confidence": 50.0}
-    avg_change = sum(c.get('change', 0) for c in data) / len(data)
+    avg_change = sum(c.get('change', 0) for c in data) / len(data) if data else 0
     signal_count = sum(len(c.get('signals', [])) for c in data)
     base_conf = 70.0 + min(signal_count * 2, 20)
     
@@ -100,59 +119,61 @@ def get_tactical_advice(category: str, data: List[Dict[str, Any]]) -> Dict[str, 
     return {"advice": advices.get(category, "Analyzing data flow..."), "confidence": round(base_conf + (random.random() * 5), 1)}
 
 async def fetch_fallback_data(client: httpx.AsyncClient):
-    """Discrete Node failover: Each source is independent."""
+    """Tier 2 Fidelity Node: Using CryptoCompare/CoinCap for high-quality stream."""
     processed = []
     global_stats = {"market_cap": "N/A", "bitcoin_dominance": "N/A", "active_cryptos": "N/A", "volume_24h": "N/A"}
+    headers = get_rotated_headers()
     
-    # Tier 1 Fallback: CoinCap for Markets
-    log_recon("RECON :: ATTEMPTING_DISCRETE_NODE_COINCAP...")
+    # 1. Try CryptoCompare (High Fidelity Tier 2)
+    log_recon("RECON :: ATTEMPTING_TIER_2_CRYPTOCOMPARE_NODE...")
     try:
-        res = await client.get(f"{COINCAP_BASE}/assets", params={"limit": 250}, headers=RECON_HEADERS, timeout=8.0)
+        res = await client.get(f"{CRYPTOCOMPARE_BASE}/top/mktcapfull", params={"limit": 50, "tsym": "USD"}, headers=headers, timeout=8.0)
         if res.status_code == 200:
-            data = res.json().get("data", [])
-            for coin in data:
-                price = float(coin.get("priceUsd", 0))
-                change = float(coin.get("changePercent24Hr", 0))
+            data = res.json().get("Data", [])
+            for item in data:
+                info = item.get("CoinInfo", {})
+                raw = item.get("RAW", {}).get("USD", {})
+                price = raw.get("PRICE", 0)
+                change = raw.get("CHANGEPCT24HOUR", 0)
                 processed.append({
-                    "id": coin.get("id"), "name": coin.get("name"), "symbol": coin.get("symbol").upper(),
+                    "id": info.get("Name"), "name": info.get("FullName"), "symbol": info.get("Name").upper(),
                     "price": price, "formatted_price": f"${price:,.2f}" if price >= 0.01 else f"${price:.6f}",
                     "change": change, "formatted_change": f"{change:+.2f}%",
-                    "image": None, "rank": int(coin.get("rank", 999)),
-                    "volume": f"${float(coin.get('volumeUsd24Hr', 0)) / 1e6:,.2f}M",
-                    "signals": ["FAILOVER_NODE_CAP"]
+                    "image": f"https://www.cryptocompare.com{info.get('ImageUrl')}", 
+                    "rank": 999,
+                    "volume": f"${raw.get('VOLUME24HOUR', 0) / 1e6:,.2f}M",
+                    "signals": ["FAILOVER_NODE_COMPARE"]
                 })
-            log_recon("RECON :: COINCAP_DATA_ACQUIRED")
-        else:
-            log_recon(f"RECON :: COINCAP_STATUS_ERROR: {res.status_code}")
+            log_recon("RECON :: CRYPTOCOMPARE_DATA_ACQUIRED")
     except Exception as e:
-        log_recon(f"RECON :: COINCAP_DNS_OR_NET_ERROR: {str(e)}")
+        log_recon(f"RECON :: CRYPTOCOMPARE_FAILURE: {str(e)}")
 
-    # Tier 2 Fallback: CoinLore for Markets (If CoinCap failed or returned empty)
+    # 2. Try CoinCap (Backup Fidelity)
     if not processed:
-        log_recon("RECON :: ATTEMPTING_DISCRETE_NODE_COINLORE...")
+        log_recon("RECON :: ATTEMPTING_SECONDARY_LEVEL_COINCAP...")
         try:
-            res = await client.get(f"{COINLORE_BASE}/tickers/", headers=RECON_HEADERS, timeout=8.0)
+            res = await client.get(f"{COINCAP_BASE}/assets", params={"limit": 100}, headers=headers, timeout=8.0)
             if res.status_code == 200:
                 data = res.json().get("data", [])
                 for coin in data:
-                    price = float(coin.get("price_usd", 0))
-                    change = float(coin.get("percent_change_24h", 0))
+                    price = float(coin.get("priceUsd", 0))
+                    change = float(coin.get("changePercent24Hr", 0))
                     processed.append({
                         "id": coin.get("id"), "name": coin.get("name"), "symbol": coin.get("symbol").upper(),
                         "price": price, "formatted_price": f"${price:,.2f}" if price >= 0.01 else f"${price:.6f}",
                         "change": change, "formatted_change": f"{change:+.2f}%",
                         "image": None, "rank": int(coin.get("rank", 999)),
-                        "volume": "HIDDEN",
-                        "signals": ["FAILOVER_NODE_LORE"]
+                        "volume": f"${float(coin.get('volumeUsd24Hr', 0)) / 1e6:,.2f}M",
+                        "signals": ["FAILOVER_NODE_CAP"]
                     })
-                log_recon("RECON :: COINLORE_DATA_ACQUIRED")
+                log_recon("RECON :: COINCAP_DATA_ACQUIRED")
         except Exception as e:
-            log_recon(f"RECON :: COINLORE_ERROR: {str(e)}")
+            log_recon(f"RECON :: COINCAP_FAILURE: {str(e)}")
 
-    # Tier 3 Fallback: CoinPaprika for Global Stats
-    log_recon("RECON :: ATTEMPTING_DISCRETE_NODE_PAPRIKA_GLOBAL...")
+    # 3. Global Stats Node
+    log_recon("RECON :: SYNCING_GLOBAL_STATS_NODE...")
     try:
-        p_res = await client.get(f"{COINPAPRIKA_BASE}/global", headers=RECON_HEADERS, timeout=6.0)
+        p_res = await client.get(f"{COINPAPRIKA_BASE}/global", headers=headers, timeout=6.0)
         if p_res.status_code == 200:
             p_data = p_res.json()
             global_stats = {
@@ -161,11 +182,9 @@ async def fetch_fallback_data(client: httpx.AsyncClient):
                 "active_cryptos": f"{p_data.get('cryptocurrencies_number', 0):,}",
                 "volume_24h": f"${int(p_data.get('volume_24h_usd', 0) / 1e9):.1f}B",
             }
-            log_recon("RECON :: GLOBAL_STATS_PAPRIKA_ACQUIRED")
-        else:
-            log_recon(f"RECON :: COINPAPRIKA_STATUS_ERROR: {p_res.status_code}")
+            log_recon("RECON :: GLOBAL_STATS_ACQUIRED")
     except Exception as e:
-        log_recon(f"RECON :: PAPRIKA_GLOBAL_ERROR: {str(e)}")
+        log_recon(f"RECON :: GLOBAL_STATS_FAILURE: {str(e)}")
 
     return processed, global_stats
 
@@ -201,41 +220,32 @@ def generate_simulation_data():
 async def get_crypto_stats():
     now = time.time()
     
-    # 1. Cache Hygiene & Smart Filtering
     if _stats_cache["data"]:
         age = now - _stats_cache["last_sync"]
-        source = _stats_cache["data"].get("source")
-        
-        # If cache is fresh (< 5 mins), return always
         if age < _stats_cache["ttl"]:
             return _stats_cache["data"]
-            
-        # If we reached backoff from 429s, return stale data always
         if now < _stats_cache["backoff_until"]:
             return _stats_cache["data"]
 
     async with httpx.AsyncClient() as client:
         try:
             log_recon("RECON :: PRIMARY_SCAN_STARTING...")
-            g_task = client.get(f"{COINGECKO_BASE}/global", headers=RECON_HEADERS, timeout=10.0)
-            m_task = client.get(f"{COINGECKO_BASE}/coins/markets", params={"vs_currency": "usd", "per_page": 250}, headers=RECON_HEADERS, timeout=10.0)
-            t_task = client.get(f"{COINGECKO_BASE}/search/trending", headers=RECON_HEADERS, timeout=10.0)
+            headers = get_rotated_headers()
+            g_task = client.get(f"{COINGECKO_BASE}/global", headers=headers, timeout=10.0)
+            m_task = client.get(f"{COINGECKO_BASE}/coins/markets", params={"vs_currency": "usd", "per_page": 250}, headers=headers, timeout=10.0)
+            t_task = client.get(f"{COINGECKO_BASE}/search/trending", headers=headers, timeout=10.0)
             
             responses = await asyncio.gather(g_task, m_task, t_task, return_exceptions=True)
             
-            # Status check
             for r in responses:
                 if not isinstance(r, Exception) and r.status_code == 429:
                     log_recon("RECON :: COINGECKO_RATE_LIMITED (429)")
-                    _stats_cache["backoff_until"] = now + 180 # 3 min backoff
+                    _stats_cache["backoff_until"] = now + 180 
                     raise Exception("CG_RATE_LIMIT")
 
             g_res, m_res, t_res = responses
             if any(isinstance(r, Exception) or r.status_code != 200 for r in [g_res, m_res, t_res]):
-                err_info = ""
-                if isinstance(m_res, Exception): err_info = f"NetError: {str(m_res)}"
-                elif m_res.status_code != 200: err_info = f"HttpStatus: {m_res.status_code}"
-                log_recon(f"RECON :: PRIMARY_NODE_FAILURE :: {err_info}")
+                log_recon("RECON :: PRIMARY_NODE_FAILURE :: TRIGGERING_FALLOVER")
                 raise Exception("PRIMARY_NODE_INCOMPLETE")
 
             g_json = g_res.json().get("data", {})
@@ -255,12 +265,15 @@ async def get_crypto_stats():
                     "signals": calculate_signals(c)
                 })
 
-            # Process trending as "New/Hot Listings"
+            # Process trending as "New/Hot Listings" + EXCLUDE MAJORS
             trending_processed = []
             for t in t_json:
                 item = t.get("item", {})
+                sym = str(item.get("symbol", "")).upper()
+                if sym in MAJORS_BLACKLIST: continue # Ninja Ghost Filter
+                
                 trending_processed.append({
-                    "id": item.get("id"), "name": item.get("name"), "symbol": item.get("symbol", "").upper(),
+                    "id": item.get("id"), "name": item.get("name"), "symbol": sym,
                     "price": 0, "formatted_price": "SCANNING", 
                     "change": 0, "formatted_change": "HOT",
                     "image": item.get("small"), "rank": item.get("market_cap_rank", 999),
@@ -296,10 +309,10 @@ async def get_crypto_stats():
                 res = {
                     "global": f_global,
                     "data": {
-                        "gainers": {"list": sorted(f_list, key=lambda x: x['change'], reverse=True)[:20], "insight": {"advice": "FAILOVER_NODES_ACTIVE :: Monitoring secondary streams.", "confidence": 60}},
-                        "losers": {"list": sorted(f_list, key=lambda x: x['change'])[:20], "insight": {"advice": "FAILOVER_NODES_ACTIVE :: Monitoring secondary streams.", "confidence": 60}},
-                        "penny_gems": {"list": [c for c in f_list if c['price'] < 0.5][:20], "insight": {"advice": "FAILOVER_MODE :: Limited small-cap data.", "confidence": 50}},
-                        "new_listings": {"list": [], "insight": {"advice": "OFFLINE", "confidence": 0}},
+                        "gainers": {"list": sorted(f_list, key=lambda x: x['change'], reverse=True)[:20], "insight": {"advice": "FAILOVER_NODES_ACTIVE :: High-fidelity tertiary stream.", "confidence": 60}},
+                        "losers": {"list": sorted(f_list, key=lambda x: x['change'])[:20], "insight": {"advice": "FAILOVER_NODES_ACTIVE :: Scanning backup data nodes.", "confidence": 60}},
+                        "penny_gems": {"list": [c for c in f_list if c['price'] < 0.5][:20], "insight": {"advice": "FAILOVER_MODE :: Small-cap recon active.", "confidence": 55}},
+                        "new_listings": {"list": [c for c in f_list if c['symbol'] not in MAJORS_BLACKLIST][:20], "insight": {"advice": "MONITORING_ROTATION", "confidence": 50}},
                     },
                     "source": "MULTI_NODE_FAILOVER"
                 }
@@ -307,7 +320,6 @@ async def get_crypto_stats():
                 _stats_cache["last_sync"] = now
                 return res
             
-            # FINAL RESORT: PROTOCOL ZERO
             if _stats_cache["data"] and _stats_cache["data"].get("source") != "PROTOCOL_ZERO_SIMULATION":
                 log_recon("RECON :: ALL_NODES_OFFLINE :: RETURNING_STALE_CACHE")
                 return _stats_cache["data"]
