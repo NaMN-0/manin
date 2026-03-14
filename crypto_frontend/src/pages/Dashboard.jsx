@@ -94,7 +94,7 @@ const Dashboard = () => {
             }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
                     <KageLogo width={32} height={32} />
-                    <span style={{ fontSize: 24, fontWeight: 950, letterSpacing: "-1.5px" }}>KAGE <span style={{ color: "var(--primary)" }}>AI</span> <span style={{ fontSize: 10, fontWeight: 400, color: "rgba(255,255,255,0.2)", marginLeft: 8 }}>v0.5.1</span></span>
+                    <span style={{ fontSize: 24, fontWeight: 950, letterSpacing: "-1.5px" }}>KAGE <span style={{ color: "var(--primary)" }}>AI</span></span>
                     <div style={{ height: 16, width: 1, background: "rgba(255,255,255,0.1)", margin: "0 8px" }} />
                     <div style={{ fontFamily: "var(--font-mono)", color: "var(--emerald)", fontSize: 10, display: "flex", alignItems: "center", gap: 8, fontWeight: 800 }}>
                         <span className="pulse-dot"></span> LIVE NODES ACTIVE
