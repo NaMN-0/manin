@@ -6,7 +6,7 @@ import asyncio
 import time
 import random
 
-app = FastAPI(title="KAGE AI API", version="0.4.5")
+app = FastAPI(title="KAGE AI API", version="0.5.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -15,6 +15,27 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+@app.get("/")
+async def root():
+    """KAGE AI - Tactical Intelligence Command Center"""
+    return {
+        "status": "OPERATIONAL",
+        "identity": "KAGE_AI_CORE",
+        "version": "0.5.0",
+        "message": "Tactical market intelligence streams are live.",
+        "nodes": {
+            "primary": "COINGECKO",
+            "failover": ["COINCAP", "COINLORE", "COINPAPRIKA"],
+            "safety": "PROTOCOL_ZERO_SIMULATION"
+        },
+        "docs": "/docs"
+    }
+
+@app.get("/api/health")
+async def health_check():
+    """Automated health diagnostic."""
+    return {"status": "ok", "timestamp": time.time()}
 
 # Cache state for Resilience
 _stats_cache = {
