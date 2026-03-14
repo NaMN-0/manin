@@ -5,6 +5,8 @@ import axios from 'axios';
 import { NinjaAI, NinjaLogic, NinjaTarget } from '../components/NinjaIllustrations';
 import KageLogo from '../components/KageLogo';
 
+const API_BASE_URL = import.meta.env.VITE_API_URL || '';
+
 const Dashboard = () => {
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -19,7 +21,7 @@ const Dashboard = () => {
     useEffect(() => {
         const fetchStats = async () => {
             try {
-                const response = await axios.get('/api/crypto/stats');
+                const response = await axios.get(`${API_BASE_URL}/api/crypto/stats`);
                 setData(response.data);
                 const activeCount = response.data.global.active_cryptos;
                 setLogs(prev => [...prev, `MARKET_SCAN :: ${activeCount} ASSETS ANALYZED`, ">> TREND_DETECTED :: CALCULATING_ENTRIES"]);

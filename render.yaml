@@ -1,17 +1,31 @@
 services:
+  # KAGE AI Backend API
   - type: web
-    name: market-insight-engine
+    name: kage-api
     runtime: python
     buildCommand: pip install -r requirements.txt
-    startCommand: streamlit run market_server.py
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
     plan: free
     region: oregon
+    rootDir: crypto_api
     envVars:
-      - key: SUPABASE_URL
-        sync: false
-      - key: SUPABASE_ANON_KEY
-        sync: false
-      - key: PORT
-        value: 8501
       - key: PYTHON_VERSION
         value: 3.10.12
+
+  # KAGE AI Frontend
+  - type: web
+    name: kage-frontend
+    runtime: node
+    buildCommand: npm install && npm run build
+    startCommand: npm run preview # For SPA on Render Web Service, but static site is better
+    # Static Site is actually better for Vite on Render's Free tier
+    # But user might prefer Web Service if they add proxying later.
+    # Let's stick with static site style configuration if possible.
+    plan: free
+    region: oregon
+    rootDir: crypto_frontend
+    envVars:
+      - key: VITE_API_URL
+        sync: false # User will set this after API is deployed
+      - key: NODE_VERSION
+        value: 20.0.0
