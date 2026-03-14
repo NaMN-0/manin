@@ -31,6 +31,7 @@ def log_recon(msg: str):
     global _recon_logs
     timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
     _recon_logs.append(f"[{timestamp}] {msg}")
+    print(f"RECON :: {msg}")
     if len(_recon_logs) > 50: _recon_logs.pop(0)
 
 RECON_HEADERS = {
