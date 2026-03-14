@@ -23,7 +23,7 @@ const Dashboard = () => {
             try {
                 const response = await axios.get(`${API_BASE_URL}/api/crypto/stats`);
                 setData(response.data);
-                const activeCount = response.data.global.active_cryptos;
+                const activeCount = response.data?.global?.active_cryptos || "0";
                 setLogs(prev => [...prev, `MARKET_SCAN :: ${activeCount} ASSETS ANALYZED`, ">> TREND_DETECTED :: CALCULATING_ENTRIES"]);
                 setLoading(false);
             } catch (error) {
@@ -36,13 +36,13 @@ const Dashboard = () => {
         return () => clearInterval(interval);
     }, []);
 
-    const renderStat = (label, value, icon, color) => (
+    const renderStat = (label, value, variant, color) => (
         <div className="glass-card" style={{ padding: "20px 24px", borderLeft: `4px solid ${color}`, position: "relative", overflow: "hidden" }}>
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
                 <span style={{ fontSize: 10, fontWeight: 900, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "1.5px" }}>{label}</span>
-                {icon}
+                <KageLogo width={16} height={16} variant={variant} />
             </div>
-            <div style={{ fontSize: 28, fontWeight: 950, fontFamily: "var(--font-mono)", color: "white", letterSpacing: "-1px" }}>{value}</div>
+            <div style={{ fontSize: 28, fontWeight: 950, fontFamily: "var(--font-mono)", color: "white", letterSpacing: "-1px" }}>{value || 'N/A'}</div>
         </div>
     );
 
@@ -73,9 +73,9 @@ const Dashboard = () => {
         );
     };
 
-    const activeCategory = data?.data[activeTab] || { list: [], insight: { advice: "Scanning...", confidence: 0 } };
-    const activeList = activeCategory.list;
-    const activeInsight = activeCategory.insight;
+    const activeCategory = data?.data?.[activeTab] || { list: [], insight: { advice: "Scanning...", confidence: 0 } };
+    const activeList = activeCategory.list || [];
+    const activeInsight = activeCategory.insight || { advice: "Analyzing flow...", confidence: 0 };
 
     return (
         <div style={{ background: "#050508", minHeight: "100vh", color: "white", display: "flex", flexDirection: "column" }}>
@@ -112,12 +112,12 @@ const Dashboard = () => {
             </header>
 
             <main style={{ flex: 1, padding: "40px 48px", maxWidth: 1800, margin: "0 auto", width: "100%" }}>
-                {/* Global Metrics Row */}
+                {/* Global Metrics Row - BRANDED LOGO ICONS */}
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 24, marginBottom: 40 }}>
-                    {renderStat("MARKET CAP", data?.global.market_cap || "...", <TrendingUp size={14} color="var(--primary)" />, "var(--primary)")}
-                    {renderStat("BTC DOMINANCE", data?.global.bitcoin_dominance || "...", <Target size={14} color="var(--crimson)" />, "var(--crimson)")}
-                    {renderStat("GLOBAL VOLUME", data?.global.volume_24h || "...", <Zap size={14} color="var(--amber)" />, "var(--amber)")}
-                    {renderStat("ACTIVE ASSETS", data?.global.active_cryptos || "...", <Shield size={14} color="var(--emerald)" />, "var(--emerald)")}
+                    {renderStat("MARKET CAP", data?.global?.market_cap, "trend", "var(--primary)")}
+                    {renderStat("BTC DOMINANCE", data?.global?.bitcoin_dominance, "target", "var(--crimson)")}
+                    {renderStat("GLOBAL VOLUME", data?.global?.volume_24h, "zap", "var(--amber)")}
+                    {renderStat("ACTIVE ASSETS", data?.global?.active_cryptos, "shield", "var(--emerald)")}
                 </div>
 
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 340px", gap: 32 }}>

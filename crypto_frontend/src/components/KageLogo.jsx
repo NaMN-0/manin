@@ -1,6 +1,10 @@
 import React from 'react';
 
-export default function KageLogo({ className, style, width = 40, height = 40 }) {
+export default function KageLogo({ className, style, width = 40, height = 40, variant = 'default' }) {
+  // Master Colors
+  const primary = "#0ea5e9";
+  const dark = "#0a0a0f";
+
   return (
     <svg
       width={width}
@@ -24,45 +28,63 @@ export default function KageLogo({ className, style, width = 40, height = 40 }) 
           <stop offset="100%" stopColor="#0369a1" />
         </linearGradient>
       </defs>
-      {/* Master Shape - Improved from favicon.svg */}
+
+      {/* Base Shield - Always present as the signature of KAGE AI */}
       <path
         d="M50 5 L95 25 L85 85 L50 95 L15 85 L5 25 Z"
         fill="url(#logoGradient)"
         stroke="rgba(255,255,255,0.1)"
         strokeWidth="2"
       />
-      {/* Ninja Mask Cutout */}
-      <path d="M20 40 H80 V60 H20 Z" fill="#0a0a0f" />
-      
-      {/* Eyes from favicon.svg design */}
-      <rect x="30" y="45" width="5" height="10" rx="2" fill="white" />
-      <rect x="65" y="42" width="5" height="14" rx="2" fill="#0ea5e9" />
-      
-      {/* Headband Line */}
-      <path
-        d="M10 25 C10 25, 30 15, 50 25 C70 35, 90 25, 90 25"
-        stroke="white"
-        strokeWidth="3"
-        strokeLinecap="round"
-        opacity="0.9"
-      />
-      
-      {/* Subtle Branding Pulse for the React component */}
-      <circle
-        cx="50"
-        cy="50"
-        r="45"
-        stroke="white"
-        strokeWidth="0.5"
-        opacity="0.2"
-      >
-        <animate
-          attributeName="opacity"
-          values="0.2;0.05;0.2"
-          dur="3s"
-          repeatCount="indefinite"
+
+      {variant === 'default' && (
+        <>
+          <path d="M20 40 H80 V60 H20 Z" fill={dark} />
+          <rect x="30" y="45" width="5" height="10" rx="2" fill="white" />
+          <rect x="65" y="42" width="5" height="14" rx="2" fill={primary} />
+          <path
+            d="M10 25 C10 25, 30 15, 50 25 C70 35, 90 25, 90 25"
+            stroke="white"
+            strokeWidth="3"
+            strokeLinecap="round"
+            opacity="0.9"
+          />
+        </>
+      )}
+
+      {variant === 'zap' && (
+        <path
+          d="M45 30 L65 30 L40 50 L60 50 L35 75"
+          stroke="white"
+          strokeWidth="6"
+          strokeLinecap="round"
+          strokeLinejoin="round"
         />
-      </circle>
+      )}
+
+      {variant === 'shield' && (
+        <path
+          d="M35 45 L45 55 L65 35"
+          stroke="white"
+          strokeWidth="8"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      )}
+
+      {variant === 'trend' && (
+        <path
+          d="M30 65 L45 50 L55 60 L75 35"
+          stroke="white"
+          strokeWidth="6"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      )}
+
+      {variant === 'target' && (
+         <circle cx="50" cy="50" r="15" stroke="white" strokeWidth="4" />
+      )}
     </svg>
   );
 }
